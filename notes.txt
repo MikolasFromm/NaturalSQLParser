@@ -1,0 +1,4 @@
+AI API could be also used to determine the correct data format:
+	- "245 €" is given.
+	- Question can be: "From given types, choose the matching option:"
+		- If number, prefix / suffix can be cutoff

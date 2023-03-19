@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NaturalSQLParser", "NaturalSQLParser.csproj", "{3F276FA1-B8CD-4C8D-AADA-61AC8A59DEBC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3F276FA1-B8CD-4C8D-AADA-61AC8A59DEBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F276FA1-B8CD-4C8D-AADA-61AC8A59DEBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F276FA1-B8CD-4C8D-AADA-61AC8A59DEBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F276FA1-B8CD-4C8D-AADA-61AC8A59DEBC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {66D969CE-4993-4FF8-8BC3-BE7817794415}
+	EndGlobalSection
+EndGlobal
