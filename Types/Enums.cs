@@ -49,6 +49,7 @@
     {
         DropColumns,
         SortBy,
+        Paging,
         GroupBy,
         FilterBy,
         Aggregate,

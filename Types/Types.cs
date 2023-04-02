@@ -12,12 +12,11 @@ namespace NaturalSQLParser.Types
     /// <summary>
     /// CSV file will be harvested by user requests.
     /// Therefore the structure will partially ignore the csv rows / columns and will create its own representation.
-    /// Each column is specified by Header class, which is then shared throughout the whole Field class. <see cref="NaturalSQLParser.Types.Field"/>
-    /// The Header class also defines the column DataType, which is shared throughout the whole Field class. <see cref="NaturalSQLParser.Types.Header"/>
+    /// Each column is specified by Header class, which is then shared throughout the whole <see cref="NaturalSQLParser.Types.Field"/> class.
+    /// The <see cref="NaturalSQLParser.Types.Header"/> class also defines the column <see cref="FieldDataType", which is shared throughout the whole <see cref="NaturalSQLParser.Types.Field"/>.
     /// Field class consists of a List of atomic cells and a ref. to its parent Header.
     /// The list is supposed to simulate one column
-    /// Cell class is representing the raw data stored. <see cref="NaturalSQLParser.Types.Cell"/>
-    /// 
+    /// <see cref="NaturalSQLParser.Types.Cell"/> class is representing the raw data stored.
     /// When user wants to work with only some columns from a dataset, List<Field> is created, holding only the data selected.
     /// </summary>
 
@@ -50,14 +49,23 @@ namespace NaturalSQLParser.Types
 
     /// <summary>
     /// Full representation of a column from a CSV.
-    /// Header holds all header info (DataType and Name) <see cref="NaturalSQLParser.Types.Header"/>.
+    /// <see cref="NaturalSQLParser.Types.Header"/> holds all header info (<see cref="FieldDataType"/> and Name).
     /// Data holds all individual cells from the given Collumn <see cref="NaturalSQLParser.Types.Cell"/>.
     /// </summary>
-    public class Field
+    
+    public class EmptyField
     {
         public Header Header { get; set; }
+    }
 
+    public class Field : EmptyField
+    {
         public List<Cell> Data { get; set; } = new();
+    }
+
+    public class DataSet
+    {
+        public List<Field> Fields { get; set; } = new();
     }
 
     public class FilterCondition

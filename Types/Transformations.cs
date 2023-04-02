@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Net.Http.Headers;
 
 // user_custom definitions
 using NaturalSQLParser.Types;
@@ -10,7 +12,6 @@ namespace NaturalSQLParser.Types.Tranformations
 {
     public static class ListExtensions
     {
-
         public static List<int> GetIndexes(this List<Cell> cells)
         {
             var indexes =
@@ -45,16 +46,26 @@ namespace NaturalSQLParser.Types.Tranformations
 
     public abstract class BasicTransformation
     {
-        public TransformationType Type { get; set; }
+        public abstract TransformationType Type { get;}
 
         public abstract List<Field> PerformTransformation(List<Field> input_list);
+
+        public abstract List<EmptyField> Preprocess(List<EmptyField> list);
     }
 
     public class EmptyTransformation : BasicTransformation
     {
-        public override List<Field> PerformTransformation(List<Field> input_field)
+
+        public override TransformationType Type { get; } = TransformationType.Empty;
+
+        public override List<Field> PerformTransformation(List<Field> input_fields)
         {
-            return input_field;
+            return input_fields;
+        }
+
+        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        {
+            return list;
         }
     }
 
@@ -62,10 +73,21 @@ namespace NaturalSQLParser.Types.Tranformations
     {
         public HashSet<Header> DropHeaders { get; set; }
 
+        public override TransformationType Type { get; } = TransformationType.DropColumns;
+
         public override List<Field> PerformTransformation(List<Field> input_fields)
         {
             var selected_fields =
                  from field in input_fields
+                 where !DropHeaders.Contains(field.Header)
+                 select field;
+            return selected_fields.ToList();
+        }
+
+        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        {
+            var selected_fields =
+                 from field in list
                  where !DropHeaders.Contains(field.Header)
                  select field;
             return selected_fields.ToList();
@@ -77,6 +99,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public SortDirection Direction { get; set; }
 
         public Header SortSource { get; set; }
+
+        public override TransformationType Type { get; } = TransformationType.SortBy;
 
         public override List<Field> PerformTransformation(List<Field> input_fields)
         {
@@ -91,13 +115,22 @@ namespace NaturalSQLParser.Types.Tranformations
                 throw new ArgumentException("Field to SortBy not found.");
             }
         }
+
+        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        {
+            return list;
+        }
     }
 
     public class GroupByTransformation : BasicTransformation
     {
         public HashSet<string> StringsToGroup { get; set; }
 
+        public Agregation GroupAgregation { get; set; }
+
         public Header TargetHeader { get; set; }
+
+        public override TransformationType Type { get; } = TransformationType.GroupBy;
 
         public override List<Field> PerformTransformation(List<Field> fields)
         {
@@ -121,11 +154,30 @@ namespace NaturalSQLParser.Types.Tranformations
                 // ReArrange the fields that are left
                 var indexes = field.Data.GetIndexes();
                 return fields.ReArrangeAndSelectByIndex(field.Header, indexes);
-
             }
             else
             {
                 throw new ArgumentException("Field to GroupBy not found.");
+            }
+        }
+
+        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        {
+            switch (GroupAgregation)
+            {
+                case Agregation.CountAll:
+                case Agregation.CountDistinct:
+                case Agregation.Sum:
+                case Agregation.Mean:
+                    foreach (var field in list)
+                        field.Header.Type = FieldDataType.Number;
+                    return list;
+                case Agregation.GroupKey:
+                case Agregation.ConcatValues:
+                    return list;
+
+                default:
+                    throw new ArgumentException("Unknown Agregation");
             }
         }
     }
@@ -135,6 +187,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public FilterLogicalOperator FilterOperator { get; set; }
 
         public FilterCondition FilterCondition { get; set; }
+
+        public override TransformationType Type { get; } = TransformationType.FilterBy;
 
         public override List<Field> PerformTransformation(List<Field> fields)
         {
@@ -187,10 +241,22 @@ namespace NaturalSQLParser.Types.Tranformations
                 throw new ArgumentException("Field to FilterBy not found.");
             }
         }
+
+        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        {
+            return list;
+        }
     }
 
-    public class AggregationTransformation : BasicTransformation
+    public static class Transformator
     {
-        public GroupAgregations GroupAgregations { get; set; }
+        public static List<Field> TransformFields(List<Field> fields, List<BasicTransformation> transformations)
+        {
+            foreach (var transformation in transformations)
+            {
+                fields = transformation.PerformTransformation(fields);
+            }
+            return fields;
+        }
     }
 }
