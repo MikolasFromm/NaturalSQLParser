@@ -33,6 +33,11 @@ namespace NaturalSQLParser.Types
         public string Name { get; set; }
 
         public int Index { get; set; } = 0;
+
+        public Header(string name)
+        {
+            Name = name;
+        }
     }
 
     /// <summary>

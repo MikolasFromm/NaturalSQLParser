@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 
 // user_custom definitions
 using NaturalSQLParser.Types;
@@ -44,38 +45,130 @@ namespace NaturalSQLParser.Types.Tranformations
         }
     }
 
-    public abstract class BasicTransformation
+    public static class TransformationFactory
     {
-        public abstract TransformationType Type { get;}
+        public static ITransformation GetTransformation(string transformation, params string[] args)
+        {
+            switch (transformation)
+            {
+                case "Empty":
+                    var emptyTrans = new EmptyTransformation();
+                    return emptyTrans;
 
-        public abstract List<Field> PerformTransformation(List<Field> input_list);
+                case "DropColumn":
+                    var dropTrans = new DropColumnTransformation();
+                    foreach (var arg in args)
+                        dropTrans.DropHeaders.Add(new Header(arg));
+                    return dropTrans;
 
-        public abstract List<EmptyField> Preprocess(List<EmptyField> list);
+                case "SortBy":
+                    var sortTrans = new SortByTransformation();
+                    sortTrans.SortBy = new Header(args[0]);
+                    if (args[1] == "Asc")
+                        sortTrans.Direction = SortDirection.Ascending;
+                    else if (args[1] == "Desc")
+                        sortTrans.Direction = SortDirection.Descending;
+                    else
+                        throw new ArgumentException($"SortDirection \"{args[1]}\" unrecognized");
+                    return sortTrans;
+
+                case "GroupBy":
+                    var groupTrans = new GroupByTransformation();
+                    if (args.Length < 3)
+                        throw new ArgumentException("Not enough arguments for GroupBy transformation");
+                    groupTrans.TargetHeader = new Header(args[0]);
+                    if (args[1] == "Sum")
+                        groupTrans.GroupAgregation = Agregation.Sum;
+                    else if (args[1] == "Avg")
+                        groupTrans.GroupAgregation = Agregation.Mean;
+                    else if (args[1] == "Concat")
+                        groupTrans.GroupAgregation = Agregation.ConcatValues;
+                    else if (args[1] == "CountDistinct")
+                        groupTrans.GroupAgregation = Agregation.CountDistinct;
+                    else if (args[1] == "CountAll")
+                        groupTrans.GroupAgregation = Agregation.CountAll;
+                    else if (args[1] == "GroupKey")
+                        groupTrans.GroupAgregation = Agregation.GroupKey;
+                    else
+                        throw new ArgumentException($"Agregation \"{args[1]}\" not supported");
+                    for(int i = 2; i < args.Length; i++)
+                        groupTrans.StringsToGroup.Add(args[i]);
+                    return groupTrans;
+
+                case "FilterBy":
+                    var filterTrans = new FilterByTransformation();
+                    if (args.Length < 3)
+                        throw new ArgumentException("Not enough arguments for FilterBy transformation");
+                    if (args[0] == "==")
+                    {
+                        filterTrans.FilterCondition.Relation = Relation.Equals;
+                        filterTrans.FilterCondition.Source = new Header(args[1]);
+                        filterTrans.FilterCondition.Condition = args[2];
+                    }
+                    else if (args[0] == "!=")
+                    {
+                        filterTrans.FilterCondition.Relation = Relation.NotEquals;
+                        filterTrans.FilterCondition.Source = new Header(args[1]);
+                        filterTrans.FilterCondition.Condition = args[2];
+                    }
+                    else if (args[0] == "<")
+                    {
+                        filterTrans.FilterCondition.Relation = Relation.LessThan;
+                        filterTrans.FilterCondition.Source = new Header(args[1]);
+                        filterTrans.FilterCondition.Condition = args[2];
+                    }
+                    else if (args[0] == ">")
+                    {
+                        filterTrans.FilterCondition.Relation = Relation.GreaterThan;
+                        filterTrans.FilterCondition.Source = new Header(args[1]);
+                        filterTrans.FilterCondition.Condition = args[2];
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Operation \"{args[0]}\" not supported");
+                    }
+                    return filterTrans;
+                default:
+                    throw new ArgumentException($"Transformation \"{transformation}\" not supported");
+            }
+        }
     }
 
-    public class EmptyTransformation : BasicTransformation
+    public interface ITransformation
     {
+        public TransformationType Type { get;}
 
-        public override TransformationType Type { get; } = TransformationType.Empty;
+        public List<Field> PerformTransformation(List<Field> input_list);
 
-        public override List<Field> PerformTransformation(List<Field> input_fields)
+        public List<EmptyField> Preprocess(List<EmptyField> list);
+
+        public string GetOperator();
+    }
+
+    public class EmptyTransformation : ITransformation
+    {
+        public TransformationType Type => TransformationType.Empty;
+
+        public List<Field> PerformTransformation(List<Field> input_fields)
         {
             return input_fields;
         }
 
-        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        public List<EmptyField> Preprocess(List<EmptyField> list)
         {
             return list;
         }
+
+        public string GetOperator() => "Empty";
     }
 
-    public class DropColumnTransformation : BasicTransformation
-    {
+    public class DropColumnTransformation : ITransformation
+    { 
+        public TransformationType Type => TransformationType.DropColumns;
+
         public HashSet<Header> DropHeaders { get; set; }
 
-        public override TransformationType Type { get; } = TransformationType.DropColumns;
-
-        public override List<Field> PerformTransformation(List<Field> input_fields)
+        public List<Field> PerformTransformation(List<Field> input_fields)
         {
             var selected_fields =
                  from field in input_fields
@@ -84,7 +177,7 @@ namespace NaturalSQLParser.Types.Tranformations
             return selected_fields.ToList();
         }
 
-        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        public List<EmptyField> Preprocess(List<EmptyField> list)
         {
             var selected_fields =
                  from field in list
@@ -92,19 +185,21 @@ namespace NaturalSQLParser.Types.Tranformations
                  select field;
             return selected_fields.ToList();
         }
+
+        public string GetOperator() => "DropColumn";
     }
 
-    public class SortByTransformation : BasicTransformation
+    public class SortByTransformation : ITransformation
     {
+        public TransformationType Type => TransformationType.SortBy;
+
         public SortDirection Direction { get; set; }
 
-        public Header SortSource { get; set; }
+        public Header SortBy { get; set; }
 
-        public override TransformationType Type { get; } = TransformationType.SortBy;
-
-        public override List<Field> PerformTransformation(List<Field> input_fields)
+        public List<Field> PerformTransformation(List<Field> input_fields)
         {
-            Field? source_field = input_fields.FirstOrDefault(x => x.Header == SortSource);
+            Field? source_field = input_fields.FirstOrDefault(x => x.Header == SortBy);
             if (source_field is not null)
             {
                 var indexes = source_field.SortAndGetIndexes();
@@ -116,23 +211,25 @@ namespace NaturalSQLParser.Types.Tranformations
             }
         }
 
-        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        public List<EmptyField> Preprocess(List<EmptyField> list)
         {
             return list;
         }
+
+        public string GetOperator() => "SortBy";
     }
 
-    public class GroupByTransformation : BasicTransformation
+    public class GroupByTransformation : ITransformation
     {
+        public TransformationType Type => TransformationType.GroupBy;
+
         public HashSet<string> StringsToGroup { get; set; }
 
         public Agregation GroupAgregation { get; set; }
 
         public Header TargetHeader { get; set; }
 
-        public override TransformationType Type { get; } = TransformationType.GroupBy;
-
-        public override List<Field> PerformTransformation(List<Field> fields)
+        public List<Field> PerformTransformation(List<Field> fields)
         {
             Field? field = fields.FirstOrDefault(x => x.Header == TargetHeader);
             if (field is not null)
@@ -161,7 +258,7 @@ namespace NaturalSQLParser.Types.Tranformations
             }
         }
 
-        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        public List<EmptyField> Preprocess(List<EmptyField> list)
         {
             switch (GroupAgregation)
             {
@@ -180,17 +277,17 @@ namespace NaturalSQLParser.Types.Tranformations
                     throw new ArgumentException("Unknown Agregation");
             }
         }
+
+        public string GetOperator() => "GroupBy";
     }
 
-    public class FilterByTransformation : BasicTransformation
+    public class FilterByTransformation : ITransformation
     {
-        public FilterLogicalOperator FilterOperator { get; set; }
+        public TransformationType Type => TransformationType.FilterBy;
 
         public FilterCondition FilterCondition { get; set; }
 
-        public override TransformationType Type { get; } = TransformationType.FilterBy;
-
-        public override List<Field> PerformTransformation(List<Field> fields)
+        public List<Field> PerformTransformation(List<Field> fields)
         {
             Field? field = fields.FirstOrDefault(x => x.Header == FilterCondition.Source);
             if (field is not null)
@@ -242,15 +339,17 @@ namespace NaturalSQLParser.Types.Tranformations
             }
         }
 
-        public override List<EmptyField> Preprocess(List<EmptyField> list)
+        public List<EmptyField> Preprocess(List<EmptyField> list)
         {
             return list;
         }
+
+        public string GetOperator() => "FilterBy";
     }
 
     public static class Transformator
     {
-        public static List<Field> TransformFields(List<Field> fields, List<BasicTransformation> transformations)
+        public static List<Field> TransformFields(List<Field> fields, List<ITransformation> transformations)
         {
             foreach (var transformation in transformations)
             {
