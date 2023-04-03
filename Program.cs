@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.Data;
 using NaturalSQLParser.Query;
 
 namespace NaturalSQLParser
@@ -9,7 +9,8 @@ namespace NaturalSQLParser
         static void Main(string[] args)
         {
             var prc = new Processor();
-            prc.CreateQuery();
+            prc.AIRequestTest();
+            //prc.CreateQuery();
         }
     }
 }

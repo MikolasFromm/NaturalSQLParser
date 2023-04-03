@@ -2,6 +2,8 @@
 using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Types.Tranformations;
 
+using OpenAI_API;
+
 namespace NaturalSQLParser.Query
 {
     public class Processor
@@ -34,6 +36,15 @@ namespace NaturalSQLParser.Query
                 Response = generatedTransformation.Preprocess(Response);
             }
             return Response;
+        }
+
+        public async void AIRequestTest()
+        {
+            var api = new OpenAIAPI(Secrets.Credentials.PersonalApiKey);
+            var chat = api.Chat.CreateConversation();
+            chat.AppendUserInput("What is your name?");
+            string respnse = await chat.GetResponseFromChatbotAsync();
+            Console.WriteLine(respnse);
         }
     }
 }
