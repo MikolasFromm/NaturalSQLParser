@@ -104,7 +104,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     var dropTrans = new DropColumnTransformation();
                     foreach (var arg in args)
-                        dropTrans.DropHeaders.Add(new Header(arg));
+                        dropTrans.DropHeaderNames.Add(arg);
                     return dropTrans;
 
                 case "SortBy":
@@ -112,7 +112,7 @@ namespace NaturalSQLParser.Types.Tranformations
                         throw new ArgumentException("Not enough arguments for SortBy transformation");
 
                     var sortTrans = new SortByTransformation();
-                    sortTrans.SortBy = new Header(args[0]); // gets the header of the field by which to sort
+                    sortTrans.SortByHeaderName = args[0]; // gets the header of the field by which to sort
                     if (args[1] == "Asc") // if ascending or descending
                         sortTrans.Direction = SortDirection.Ascending;
                     else if (args[1] == "Desc") // if ascending or descending
@@ -127,7 +127,7 @@ namespace NaturalSQLParser.Types.Tranformations
                     
                     var groupTrans = new GroupByTransformation();
 
-                    groupTrans.TargetHeader = new Header(args[0]); // gets the header of the field by which to group
+                    groupTrans.TargetHeaderName = args[0]; // gets the header of the field by which to group
                     if (args[1] == "Sum")
                         groupTrans.GroupAgregation = Agregation.Sum;
                     else if (args[1] == "Avg")
@@ -151,7 +151,7 @@ namespace NaturalSQLParser.Types.Tranformations
                         throw new ArgumentException("Not enough arguments for FilterBy transformation");
                     
                     var filterTrans = new FilterByTransformation();
-                    filterTrans.FilterCondition.Source = new Header(args[1]);
+                    filterTrans.FilterCondition.SourceHeaderName = args[1];
 
                     if (args[1] == "==")
                     {
@@ -248,13 +248,13 @@ namespace NaturalSQLParser.Types.Tranformations
     { 
         public TransformationType Type => TransformationType.DropColumns;
 
-        public HashSet<Header> DropHeaders { get; set; } = new HashSet<Header>();
+        public HashSet<String> DropHeaderNames { get; set; } = new HashSet<String>();
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
             var selected_fields =
                  from field in input_fields
-                 where !DropHeaders.Contains(field.Header)
+                 where !DropHeaderNames.Contains(field.Header.Name)
                  select field;
             return selected_fields.ToList();
         }
@@ -263,7 +263,7 @@ namespace NaturalSQLParser.Types.Tranformations
         {
             var selected_fields =
                  from field in list
-                 where !DropHeaders.Contains(field.Header)
+                 where !DropHeaderNames.Contains(field.Header.Name)
                  select field;
             return selected_fields.ToList();
         }
@@ -289,11 +289,11 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public SortDirection Direction { get; set; }
 
-        public Header SortBy { get; set; }
+        public String SortByHeaderName { get; set; }
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
-            Field? source_field = input_fields.FirstOrDefault(x => x.Header == this.SortBy);
+            Field? source_field = input_fields.FirstOrDefault(x => x.Header.Name == this.SortByHeaderName);
             if (source_field is not null)
             {
                 var indexes = source_field.SortAndGetIndexes(); // sort the given field and get the sorted indices
@@ -333,11 +333,11 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public Agregation GroupAgregation { get; set; }
 
-        public Header TargetHeader { get; set; }
+        public String TargetHeaderName { get; set; }
 
         public List<Field> PerformTransformation(List<Field> fields)
         {
-            Field? field = fields.FirstOrDefault(x => x.Header == TargetHeader);
+            Field? field = fields.FirstOrDefault(x => x.Header.Name == TargetHeaderName);
             if (field is not null)
             {
                 // create groups
@@ -482,7 +482,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public List<Field> PerformTransformation(List<Field> fields)
         {
-            Field? field = fields.FirstOrDefault(x => x.Header == FilterCondition.Source);
+            Field? field = fields.FirstOrDefault(x => x.Header.Name == FilterCondition.SourceHeaderName);
             if (field is not null)
             {
                 switch (FilterCondition.Relation)
