@@ -31,7 +31,7 @@ namespace NaturalSQLParser.Query
                 Console.WriteLine("Choose next transformation: ");
                 foreach (var transformation in possibleTransformations)
                 {
-                    Console.Write($"{transformation.GetTransformationName()} ;");
+                    Console.Write($"{transformation.GetTransformationName()}; ");
                 }
                 Console.WriteLine();
 
@@ -48,15 +48,16 @@ namespace NaturalSQLParser.Query
                 Console.WriteLine("Next moves are: ");
                 foreach (var move in transformationCandidate.GetNextMoves(this.Response))
                 {
-                    Console.Write($"{move} ;");
+                    Console.Write($"{move}; ");
                 }
+                Console.WriteLine();
                 // Print all possible arguments for the transformation
                 Console.WriteLine("With arguments: ");
                 foreach (var item in transformationCandidate.GetArguments())
                 {
-                    Console.Write($"{item} ;");
+                    Console.Write($"{item}; ");
                 }
-
+                Console.WriteLine();
                 // Load user input
                 Console.WriteLine("Now write our move with given arguments");
                 userInput = Console.ReadLine();
@@ -72,6 +73,15 @@ namespace NaturalSQLParser.Query
                 Response = generatedTransformation.Preprocess(Response);
             }
             return Transformations;
+        }
+
+        public List<Field> MakeTransformations(IEnumerable<ITransformation> transformations, List<Field> DataSet)
+        {
+            foreach(ITransformation transformation in transformations)
+            {
+                DataSet = transformation.PerformTransformation(DataSet);
+            }
+            return DataSet;
         }
 
         public async Task AIRequestTest()
