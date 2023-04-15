@@ -10,8 +10,8 @@ namespace NaturalSQLParser
         static async Task Main(string[] args)
         {
             var prc = new Processor();
-            await prc.AIRequestTest();
-            //prc.CreateQuery();
+            //await prc.AIRequestTest();
+            prc.CreateQuery();
         }
     }
 }
