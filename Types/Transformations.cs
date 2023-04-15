@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
-
-// user_custom definitions
+﻿// user_custom definitions
 using NaturalSQLParser.Types;
 using NaturalSQLParser.Types.Enums;
 
@@ -64,7 +57,40 @@ namespace NaturalSQLParser.Types.Tranformations
 
     public static class TransformationFactory
     {
-        public static ITransformation GetTransformation(string transformation, params string[] args)
+        /// <summary>
+        /// Only returns empty transformation class for obtaining the corrent moves and arguments.
+        /// </summary>
+        /// <param name="transformation">String representation of the transformation</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException">When unknown transformation given.</exception>
+        public static ITransformation GetTransformationCandidate(string transformation)
+        {
+            switch (transformation)
+            {
+                case "Empty":
+                    return new EmptyTransformation();
+                case "DropColumn":
+                    return new DropColumnTransformation();
+                case "SortBy":
+                    return new SortByTransformation();
+                case "GroupBy":
+                    return new GroupByTransformation();
+                case "FilterBy":
+                    return new FilterByTransformation();
+                default:
+                    throw new ArgumentException("Unknown transformation");
+            }
+        }
+
+        /// <summary>
+        /// Transformation builder, which already expects all input arguments in given order and in corrent format.
+        /// It is expected that user first calls <see cref="GetTransformationCandidate(string)"/> to obtain all moves and arguments.
+        /// </summary>
+        /// <param name="transformation"><see cref="String"/> representation of a transformation.</param>
+        /// <param name="args">All arguments given for the transformation.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException">When wrong arguments given.</exception>
+        public static ITransformation BuildTransformation(string transformation, params string[] args)
         {
             switch (transformation)
             {
@@ -73,12 +99,18 @@ namespace NaturalSQLParser.Types.Tranformations
                     return emptyTrans;
 
                 case "DropColumn":
+                    if (args.Length < 1)
+                        throw new ArgumentException("Not enough arguments for DropColumn transformation");
+
                     var dropTrans = new DropColumnTransformation();
                     foreach (var arg in args)
                         dropTrans.DropHeaders.Add(new Header(arg));
                     return dropTrans;
 
                 case "SortBy":
+                    if (args.Length < 2)
+                        throw new ArgumentException("Not enough arguments for SortBy transformation");
+
                     var sortTrans = new SortByTransformation();
                     sortTrans.SortBy = new Header(args[0]); // gets the header of the field by which to sort
                     if (args[1] == "Asc") // if ascending or descending
@@ -90,9 +122,11 @@ namespace NaturalSQLParser.Types.Tranformations
                     return sortTrans;
 
                 case "GroupBy":
-                    var groupTrans = new GroupByTransformation();
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for GroupBy transformation");
+                    
+                    var groupTrans = new GroupByTransformation();
+
                     groupTrans.TargetHeader = new Header(args[0]); // gets the header of the field by which to group
                     if (args[1] == "Sum")
                         groupTrans.GroupAgregation = Agregation.Sum;
@@ -113,31 +147,30 @@ namespace NaturalSQLParser.Types.Tranformations
                     return groupTrans;
 
                 case "FilterBy":
-                    var filterTrans = new FilterByTransformation();
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for FilterBy transformation");
-                    if (args[0] == "==")
+                    
+                    var filterTrans = new FilterByTransformation();
+                    filterTrans.FilterCondition.Source = new Header(args[1]);
+
+                    if (args[1] == "==")
                     {
                         filterTrans.FilterCondition.Relation = Relation.Equals;
-                        filterTrans.FilterCondition.Source = new Header(args[1]);
                         filterTrans.FilterCondition.Condition = args[2];
                     }
-                    else if (args[0] == "!=")
+                    else if (args[1] == "!=")
                     {
                         filterTrans.FilterCondition.Relation = Relation.NotEquals;
-                        filterTrans.FilterCondition.Source = new Header(args[1]);
                         filterTrans.FilterCondition.Condition = args[2];
                     }
-                    else if (args[0] == "<")
+                    else if (args[1] == "<")
                     {
                         filterTrans.FilterCondition.Relation = Relation.LessThan;
-                        filterTrans.FilterCondition.Source = new Header(args[1]);
                         filterTrans.FilterCondition.Condition = args[2];
                     }
-                    else if (args[0] == ">")
+                    else if (args[1] == ">")
                     {
                         filterTrans.FilterCondition.Relation = Relation.GreaterThan;
-                        filterTrans.FilterCondition.Source = new Header(args[1]);
                         filterTrans.FilterCondition.Condition = args[2];
                     }
                     else
@@ -155,11 +188,38 @@ namespace NaturalSQLParser.Types.Tranformations
     {
         public TransformationType Type { get;}
 
+        /// <summary>
+        /// Makes the real final transformation on the given field.
+        /// </summary>
+        /// <param name="input_list"></param>
+        /// <returns></returns>
         public List<Field> PerformTransformation(List<Field> input_list);
 
+        /// <summary>
+        /// Makes the transformation only with <see cref="EmptyField"/>, which is used to get all future transformations.
+        /// </summary>
+        /// <param name="list">Current dataset</param>
+        /// <returns></returns>
         public List<EmptyField> Preprocess(List<EmptyField> list);
 
-        public string GetOperator();
+        /// <summary>
+        /// Returns string represenation of the function operator assigned to the transformation.
+        /// Should be given to the OpenAI api to get all possibilities.
+        /// </summary>
+        /// <returns><see cref="String"/> representation of the transformation.</returns>
+        public string GetTransformationName();
+
+        /// <summary>
+        /// Returns all possible next moves when the transformation is invoked.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields);
+
+        /// <summary>
+        /// Returns all possible arguments related to the possible moves.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetArguments();
     }
 
     public class EmptyTransformation : ITransformation
@@ -176,14 +236,19 @@ namespace NaturalSQLParser.Types.Tranformations
             return list;
         }
 
-        public string GetOperator() => "Empty";
+        public string GetTransformationName() => "Empty";
+
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) => new List<string>();
+
+        public IEnumerable<string> GetArguments() => new List<string>();
+
     }
 
     public class DropColumnTransformation : ITransformation
     { 
         public TransformationType Type => TransformationType.DropColumns;
 
-        public HashSet<Header> DropHeaders { get; set; }
+        public HashSet<Header> DropHeaders { get; set; } = new HashSet<Header>();
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
@@ -203,7 +268,19 @@ namespace NaturalSQLParser.Types.Tranformations
             return selected_fields.ToList();
         }
 
-        public string GetOperator() => "DropColumn";
+        public string GetTransformationName() => "DropColumn";
+
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields)
+        {
+            var moves = new List<string>();
+            foreach (var field in fields)
+            {
+                moves.Add(field.Header.Name);
+            }
+            return moves;
+        }
+
+        public IEnumerable<string> GetArguments() => new List<string>();
     }
 
     public class SortByTransformation : ITransformation
@@ -216,11 +293,11 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
-            Field? source_field = input_fields.FirstOrDefault(x => x.Header == SortBy);
+            Field? source_field = input_fields.FirstOrDefault(x => x.Header == this.SortBy);
             if (source_field is not null)
             {
-                var indexes = source_field.SortAndGetIndexes();
-                return input_fields.ReArrangeAndSelectByIndex(source_field.Header, indexes);
+                var indexes = source_field.SortAndGetIndexes(); // sort the given field and get the sorted indices
+                return input_fields.ReArrangeAndSelectByIndex(source_field.Header, indexes); // re-arrange all fields by the sorted indices and ignore the one already sorted
             }
             else
             {
@@ -230,10 +307,22 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public List<EmptyField> Preprocess(List<EmptyField> list)
         {
-            return list;
+            return list; // practically the set remains the same, only order changes
         }
 
-        public string GetOperator() => "SortBy";
+        public string GetTransformationName() => "SortBy";
+
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields)
+        {
+            var moves = new List<string>();
+            foreach (var field in fields)
+            {
+                moves.Add(field.Header.Name);
+            }
+            return moves;
+        }
+
+        public IEnumerable<string> GetArguments() => new List<string> { "Asc", "Desc" };
     }
 
     public class GroupByTransformation : ITransformation
@@ -261,9 +350,92 @@ namespace NaturalSQLParser.Types.Tranformations
 
                 // create one list from the groups
                 var grouped = new List<Cell>();
-                foreach (var group in grouped_cells)
-                    grouped.Concat(group);
-                field.Data = grouped;
+                int rowIndex = 0;
+                switch (this.GroupAgregation)
+                {
+                    case Agregation.GroupKey:
+                        throw new NotImplementedException();
+                        break;
+
+                    case Agregation.CountAll:
+                        foreach (var group in grouped_cells)
+                        {
+                            int count = 0;
+                            foreach (var item in group)
+                            {
+                                count += 1;
+                            }
+                            grouped.Add(new Cell() { Content = count.ToString(), Index = rowIndex});
+                            rowIndex++;
+                        }
+                        field.Data = grouped;
+                        field.Header.Type = FieldDataType.Number;
+                        break;
+
+                    case Agregation.CountDistinct:
+                        HashSet<string> values = new();
+                        foreach (var group in grouped_cells)
+                        {
+                            int count = 0;
+                            foreach(var item in group)
+                            {
+                                if (!values.Contains(item.Content))
+                                {
+                                    count++;
+                                    values.Add(item.Content);
+                                }
+                            }
+                            grouped.Add(new Cell() { Content = count.ToString(), Index = rowIndex });
+                            rowIndex++;
+                        }
+                        field.Data = grouped;
+                        field.Header.Type = FieldDataType.Number;
+                        break;
+
+                    case Agregation.ConcatValues:
+                        foreach (var group in grouped_cells)
+                            grouped.Concat(group);
+                        field.Data = grouped;
+                        break;
+
+                    case Agregation.Sum:
+                        foreach (var group in grouped_cells)
+                        {
+                            double sum = 0;
+                            foreach (var item in group)
+                            {
+                                if(Int32.TryParse(item.Content, out int num))
+                                {
+                                    sum += num;
+                                }
+                            }
+                            grouped.Add(new Cell() { Content = sum.ToString(), Index = rowIndex});
+                            rowIndex++;
+                        }
+                        field.Data = grouped;
+                        field.Header.Type = FieldDataType.Number;
+                        break;
+
+                    case Agregation.Mean:
+                        foreach (var group in grouped_cells)
+                        {
+                            double mean = 0;
+                            uint count = 0;
+                            foreach (var item in group)
+                            {
+                                if (Int32.TryParse(item.Content, out int num))
+                                {
+                                    mean = (mean * count / (count + 1)) + num / count + 1; // rolling average
+                                    count++;
+                                }
+                            }
+                            grouped.Add(new Cell() { Content= mean.ToString(), Index = rowIndex});
+                            rowIndex++;
+                        }
+                        break;
+                    default:
+                        throw new ArgumentNullException("GroupAgregation in GroupBy transformation not set");
+                }
 
                 // ReArrange the fields that are left
                 var indexes = field.Data.GetIndexes();
@@ -295,7 +467,11 @@ namespace NaturalSQLParser.Types.Tranformations
             }
         }
 
-        public string GetOperator() => "GroupBy";
+        public string GetTransformationName() => "GroupBy";
+
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) => new List<string> { "'any header name'" };
+
+        public IEnumerable<string> GetArguments() => new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
     }
 
     public class FilterByTransformation : ITransformation
@@ -361,7 +537,19 @@ namespace NaturalSQLParser.Types.Tranformations
             return list;
         }
 
-        public string GetOperator() => "FilterBy";
+        public string GetTransformationName() => "FilterBy";
+
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) 
+        {
+            var moves = new List<string>();
+            foreach (var item in fields)
+            {
+                moves.Add(item.Header.Name);
+            }
+            return moves;
+        }
+
+        public IEnumerable<string> GetArguments() => new List<string> { "==", "!=", "<", ">" };
     }
 
     public static class Transformator
