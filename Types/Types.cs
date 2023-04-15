@@ -38,6 +38,19 @@ namespace NaturalSQLParser.Types
         {
             Name = name;
         }
+
+        public Header(string name, FieldDataType type)
+        {
+            Name = name;
+            Type = type;
+        }
+
+        public Header(string name, FieldDataType type, int index)
+        {
+            Type = type;
+            Name = name;
+            Index = index;
+        }
     }
 
     /// <summary>
@@ -45,11 +58,19 @@ namespace NaturalSQLParser.Types
     /// Content is holding the data in string representation. (parsing is done only when necessary.
     /// Index defines on which row is the content stored in csv.
     /// </summary>
-    public class Cell
+    public class Cell : IComparable<Cell>
     {
         public string Content { get; set; }
 
         public int Index { get; set; }
+
+        public int CompareTo(Cell? other)
+        {
+            if (other is null)
+                return -1;
+
+            return String.Compare(this.Content, other.Content);
+        }
     }
 
     /// <summary>
@@ -77,7 +98,7 @@ namespace NaturalSQLParser.Types
     {
         public Relation Relation { get; set; }
 
-        public Header Source { get; set; }
+        public String SourceHeaderName { get; set; }
 
         public string Condition { get; set; }
 
