@@ -3,7 +3,6 @@ using System.Data;
 using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Query;
 using NaturalSQLParser.Types;
-using OpenAI_API;
 
 namespace NaturalSQLParser
 {
