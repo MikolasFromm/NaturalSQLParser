@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Data;
 using NaturalSQLParser.Query;
+using OpenAI_API;
 
 namespace NaturalSQLParser
 {
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             var prc = new Processor();
-            prc.AIRequestTest();
+            await prc.AIRequestTest();
             //prc.CreateQuery();
         }
     }

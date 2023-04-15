@@ -13,21 +13,38 @@ namespace NaturalSQLParser.Types.Tranformations
 {
     public static class ListExtensions
     {
-        public static List<int> GetIndexes(this List<Cell> cells)
+        /// <summary>
+        /// Returns indices of given cells from the collection
+        /// </summary>
+        /// <param name="cells">List of cells from which to obtain the indices</param>
+        /// <returns><see cref="IEnumerable{int}"/> collection of indices</returns>
+        public static IEnumerable<int> GetIndexes(this IEnumerable<Cell> cells)
         {
             var indexes =
                 from cell in cells
                 select cell.Index;
-            return indexes.ToList();
+            return indexes;
         }
 
-        public static List<int> SortAndGetIndexes(this Field field)
+        /// <summary>
+        /// Sorts the data in the field and returns the indices of the sorted data
+        /// </summary>
+        /// <param name="field">Field to sort</param>
+        /// <returns><see cref="IEnumerable{int}"/> collection of indices of the cells from the field</returns>
+        public static IEnumerable<int> SortAndGetIndexes(this Field field)
         {
             field.Data.Sort();
             return field.Data.GetIndexes();
         }
 
-        public static List<Field> ReArrangeAndSelectByIndex(this List<Field> fieldList, Header fieldToIgnore, List<int> indexes)
+        /// <summary>
+        /// Recreates a list of fields where specific header might be dropped and only those cells from the field which coresponds to the given indices are kept.
+        /// </summary>
+        /// <param name="fieldList"></param>
+        /// <param name="fieldToIgnore"></param>
+        /// <param name="indexes"></param>
+        /// <returns><see cref="List{Field}"/> collection of rearranged Fields.</returns>
+        public static List<Field> ReArrangeAndSelectByIndex(this List<Field> fieldList, Header fieldToIgnore, IEnumerable<int> indexes)
         {
             for (int i = 0; i < fieldList.Count; i++)
             {
@@ -63,10 +80,10 @@ namespace NaturalSQLParser.Types.Tranformations
 
                 case "SortBy":
                     var sortTrans = new SortByTransformation();
-                    sortTrans.SortBy = new Header(args[0]);
-                    if (args[1] == "Asc")
+                    sortTrans.SortBy = new Header(args[0]); // gets the header of the field by which to sort
+                    if (args[1] == "Asc") // if ascending or descending
                         sortTrans.Direction = SortDirection.Ascending;
-                    else if (args[1] == "Desc")
+                    else if (args[1] == "Desc") // if ascending or descending
                         sortTrans.Direction = SortDirection.Descending;
                     else
                         throw new ArgumentException($"SortDirection \"{args[1]}\" unrecognized");

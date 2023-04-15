@@ -39,9 +39,9 @@ namespace NaturalSQLParser.Query
             return Response;
         }
 
-        public async void AIRequestTest()
+        public async Task AIRequestTest()
         {
-            var api = new OpenAIAPI(new APIAuthentication(Secrets.Credentials.PersonalApiKey));
+            var api = new OpenAIAPI(Secrets.Credentials.PersonalApiKey);
             var validation = await api.Auth.ValidateAPIKey();
 
             Console.WriteLine(validation);
