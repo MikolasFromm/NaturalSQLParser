@@ -93,7 +93,7 @@ namespace NaturalSQLParser.Types.Tranformations
                     var groupTrans = new GroupByTransformation();
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for GroupBy transformation");
-                    groupTrans.TargetHeader = new Header(args[0]);
+                    groupTrans.TargetHeader = new Header(args[0]); // gets the header of the field by which to group
                     if (args[1] == "Sum")
                         groupTrans.GroupAgregation = Agregation.Sum;
                     else if (args[1] == "Avg")
