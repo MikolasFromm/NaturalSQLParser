@@ -9,7 +9,7 @@ namespace NaturalSQLParser.Query
 {
     public class Processor
     {
-        private List<ITransformation> possibleTransformations = new List<ITransformation>()
+        private IEnumerable<ITransformation> possibleTransformations = new List<ITransformation>()
         {
             new EmptyTransformation(),
             new DropColumnTransformation(),
@@ -20,23 +20,58 @@ namespace NaturalSQLParser.Query
 
         public List<EmptyField> Response { get; set; } = new List<EmptyField>();
 
-        public List<EmptyField> CreateQuery()
+        private List<ITransformation> Transformations { get; set; } = new List<ITransformation>();
+
+        public IEnumerable<ITransformation> CreateQuery()
         {
-            string userInput = "";
-            while (userInput is not null)
+            string userInput;
+            while (true)
             {
-                Console.WriteLine("Choose next operator: ");
+                // Print all possible transformations
+                Console.WriteLine("Choose next transformation: ");
                 foreach (var transformation in possibleTransformations)
                 {
-                    Console.Write(transformation.GetOperator());
-                    Console.Write("; ");
+                    Console.Write($"{transformation.GetTransformationName()} ;");
                 }
                 Console.WriteLine();
-                string[] request = Console.ReadLine().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var generatedTransformation = TransformationFactory.GetTransformation(request[0], request.Skip(1).ToArray());
+
+                // Read the transformation name given by the user
+                userInput = Console.ReadLine();
+                if (userInput is null || userInput == "")
+                {
+                    break;
+                }
+
+                string transformationName = userInput;
+                var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
+                // Print all possible moves for the transformation
+                Console.WriteLine("Next moves are: ");
+                foreach (var move in transformationCandidate.GetNextMoves(this.Response))
+                {
+                    Console.Write($"{move} ;");
+                }
+                // Print all possible arguments for the transformation
+                Console.WriteLine("With arguments: ");
+                foreach (var item in transformationCandidate.GetArguments())
+                {
+                    Console.Write($"{item} ;");
+                }
+
+                // Load user input
+                Console.WriteLine("Now write our move with given arguments");
+                userInput = Console.ReadLine();
+
+                // Build transformation preprocess
+                string[] request = userInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request);
+                
+                // Save the transformation
+                Transformations.Add(generatedTransformation);
+
+                // Rebuild the possible response
                 Response = generatedTransformation.Preprocess(Response);
             }
-            return Response;
+            return Transformations;
         }
 
         public async Task AIRequestTest()
@@ -44,14 +79,7 @@ namespace NaturalSQLParser.Query
             var api = new OpenAIAPI(Secrets.Credentials.PersonalApiKey);
             var validation = await api.Auth.ValidateAPIKey();
 
-            Console.WriteLine(validation);
-
             var chat = api.Chat.CreateConversation();
-
-            //Console.Write("Write SystemMessage: ");
-            //var systemMessage = Console.ReadLine();
-            //chat.AppendSystemMessage(systemMessage);
-            //Console.WriteLine();
 
             /// give instruction as System
             chat.AppendSystemMessage("You are a teacher who helps children understand if things are animals or not.  If the user tells you an animal, you say \"yes\".  If the user tells you something that is not an animal, you say \"no\".  You only ever respond with \"yes\" or \"no\".  You do not say anything else.");
