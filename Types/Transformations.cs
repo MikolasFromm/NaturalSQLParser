@@ -210,10 +210,22 @@ namespace NaturalSQLParser.Types.Tranformations
         public string GetTransformationName();
 
         /// <summary>
+        /// Returns human instructions for the next moves.
+        /// </summary>
+        /// <returns></returns>
+        public string GetNextMovesInstructions();
+
+        /// <summary>
         /// Returns all possible next moves when the transformation is invoked.
         /// </summary>
         /// <returns></returns>
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields);
+
+        /// <summary>
+        /// Returns human instructions for the arguments that should be given.
+        /// </summary>
+        /// <returns></returns>
+        public string GetArgumentsInstructions();
 
         /// <summary>
         /// Returns all possible arguments related to the possible moves.
@@ -238,7 +250,11 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetTransformationName() => "Empty";
 
+        public string GetNextMovesInstructions() => "Empty transformation has no next moves";
+
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) => new List<string>();
+
+        public string GetArgumentsInstructions() => "Empty transformation has no arguments";
 
         public IEnumerable<string> GetArguments() => new List<string>();
 
@@ -270,6 +286,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetTransformationName() => "DropColumn";
 
+        public string GetNextMovesInstructions() => "Select Field.Header.Name to drop";
+
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields)
         {
             var moves = new List<string>();
@@ -279,6 +297,8 @@ namespace NaturalSQLParser.Types.Tranformations
             }
             return moves;
         }
+
+        public string GetArgumentsInstructions() => "Empty transformation has no arguments";
 
         public IEnumerable<string> GetArguments() => new List<string>();
     }
@@ -312,6 +332,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetTransformationName() => "SortBy";
 
+        public string GetNextMovesInstructions() => "Choose one Field from the list below, by which you want to sort the dataset";
+
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields)
         {
             var moves = new List<string>();
@@ -321,6 +343,8 @@ namespace NaturalSQLParser.Types.Tranformations
             }
             return moves;
         }
+
+        public string GetArgumentsInstructions() => "Choose whether the sorting should be ascending or descending";
 
         public IEnumerable<string> GetArguments() => new List<string> { "Asc", "Desc" };
     }
@@ -469,7 +493,11 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetTransformationName() => "GroupBy";
 
+        public string GetNextMovesInstructions() => "Choose one Field.Header.Name from the dataset, by which you want to group the dataset";
+
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) => new List<string> { "'any header name'" };
+
+        public string GetArgumentsInstructions() => "Choose one of the following Agregations you want to apply on the grouped dataset";
 
         public IEnumerable<string> GetArguments() => new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
     }
@@ -539,6 +567,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetTransformationName() => "FilterBy";
 
+        public string GetNextMovesInstructions() => "Choose one Field.Header.Name from the dataset, by which you want to filter the dataset";
+
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) 
         {
             var moves = new List<string>();
@@ -548,6 +578,8 @@ namespace NaturalSQLParser.Types.Tranformations
             }
             return moves;
         }
+
+        public string GetArgumentsInstructions() => "Choose one of the following Relations you want to apply on the filtered dataset and fill the right side of the relation";
 
         public IEnumerable<string> GetArguments() => new List<string> { "==", "!=", "<", ">" };
     }

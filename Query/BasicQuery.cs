@@ -42,24 +42,29 @@ namespace NaturalSQLParser.Query
                     break;
                 }
 
+                // obtain the transformation
                 string transformationName = userInput;
                 var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
+
+
                 // Print all possible moves for the transformation
-                Console.WriteLine("Next moves are: ");
+                Console.WriteLine(transformationCandidate.GetNextMovesInstructions());
                 foreach (var move in transformationCandidate.GetNextMoves(this.Response))
                 {
                     Console.Write($"{move}; ");
                 }
                 Console.WriteLine();
+
                 // Print all possible arguments for the transformation
-                Console.WriteLine("With arguments: ");
+                Console.WriteLine(transformationCandidate.GetArgumentsInstructions());
                 foreach (var item in transformationCandidate.GetArguments())
                 {
                     Console.Write($"{item}; ");
                 }
                 Console.WriteLine();
+
+
                 // Load user input
-                Console.WriteLine("Now write our move with given arguments");
                 userInput = Console.ReadLine();
 
                 // Build transformation preprocess
