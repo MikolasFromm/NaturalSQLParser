@@ -3,6 +3,7 @@ using System.Data;
 using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Query;
 using NaturalSQLParser.Types;
+using NaturalSQLParser.Parser;
 
 namespace NaturalSQLParser
 {
@@ -20,11 +21,17 @@ namespace NaturalSQLParser
             };
 
             var prc = new Processor();
-            prc.Response = new List<EmptyField>(dataSet);
-            //await prc.AIRequestTest();
+            var fields = CsvParser.ParseCsvFile("C:\\Users\\mikol\\Documents\\SQLMock.csv");
+            prc.Response = new List<EmptyField>(fields);
 
             var transformations = prc.CreateQuery();
-            var result = prc.MakeTransformations(transformations, dataSet);
+            var result = prc.MakeTransformations(transformations, fields);
+
+            CsvParser.ParseFieldsIntoCsv(result, "C:\\Users\\mikol\\Documents\\SQLMock-output.csv");
+
+            //await prc.AIRequestTest();
+
+
             return;
         }
     }
