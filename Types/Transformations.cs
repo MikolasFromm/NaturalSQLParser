@@ -353,7 +353,7 @@ namespace NaturalSQLParser.Types.Tranformations
     {
         public TransformationType Type => TransformationType.GroupBy;
 
-        public HashSet<string> StringsToGroup { get; set; }
+        public HashSet<string> StringsToGroup { get; set; } = new HashSet<string>();
 
         public Agregation GroupAgregation { get; set; }
 
@@ -495,9 +495,17 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetNextMovesInstructions() => "Choose one Field.Header.Name from the dataset, by which you want to group the dataset";
 
-        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) => new List<string> { "'any header name'" };
+        public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields)
+        {
+            var moves = new List<string>();
+            foreach (var item in fields)
+            {
+                moves.Add(item.Header.Name);
+            }
+            return moves;
+        }
 
-        public string GetArgumentsInstructions() => "Choose one of the following Agregations you want to apply on the grouped dataset";
+        public string GetArgumentsInstructions() => "Write by which STRING you want to group the dataset and choose one of the following Agregations you want to apply on the grouped dataset";
 
         public IEnumerable<string> GetArguments() => new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
     }

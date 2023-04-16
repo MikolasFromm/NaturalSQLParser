@@ -34,13 +34,13 @@ namespace NaturalSQLParser.Parser
             }
 
             // iteration over all data lines
-            for (int j = 0; j < data.Length; j++) // iterating over raws
+            for (int j = 0; j < data.Length; j++) // iterating over rows
             {
                 var dataLine = data[j].Split(';');
                 for (int i = 0; i < dataLine.Length; i++) // iterating over columns in a row
                 {
                     if (fieldDict.ContainsKey(i))
-                        fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = i });
+                        fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = j });
                 }
             }
 

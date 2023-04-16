@@ -28,7 +28,7 @@ namespace NaturalSQLParser.Query
             while (true)
             {
                 // Print all possible transformations
-                Console.WriteLine("Choose next transformation: ");
+                Console.WriteLine($"---> Choose next transformation: ");
                 foreach (var transformation in possibleTransformations)
                 {
                     Console.Write($"{transformation.GetTransformationName()}; ");
@@ -48,7 +48,7 @@ namespace NaturalSQLParser.Query
 
 
                 // Print all possible moves for the transformation
-                Console.WriteLine(transformationCandidate.GetNextMovesInstructions());
+                Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");
                 foreach (var move in transformationCandidate.GetNextMoves(this.Response))
                 {
                     Console.Write($"{move}; ");
@@ -56,7 +56,7 @@ namespace NaturalSQLParser.Query
                 Console.WriteLine();
 
                 // Print all possible arguments for the transformation
-                Console.WriteLine(transformationCandidate.GetArgumentsInstructions());
+                Console.WriteLine($"---> {transformationCandidate.GetArgumentsInstructions()}");
                 foreach (var item in transformationCandidate.GetArguments())
                 {
                     Console.Write($"{item}; ");
