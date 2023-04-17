@@ -4,6 +4,7 @@ using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Query;
 using NaturalSQLParser.Types;
 using NaturalSQLParser.Parser;
+using NaturalSQLParser.Types.Tranformations;
 
 namespace NaturalSQLParser
 {
@@ -24,8 +25,17 @@ namespace NaturalSQLParser
             var fields = CsvParser.ParseCsvFile("C:\\Users\\mikol\\Documents\\SQLMock.csv");
             prc.Response = new List<EmptyField>(fields);
 
-            var transformations = prc.CreateQuery();
-            var result = prc.MakeTransformations(transformations, fields);
+            //// USER INPUT
+            //var transformations = prc.CreateQuery();
+            //var result = prc.MakeTransformations(transformations, fields);
+
+            List<ITransformation> finalTransformations = new List<ITransformation>();
+            // AI INPUT
+            await foreach (var item in prc.CreateQueryAI())
+            {
+                finalTransformations.Add(item);
+            }
+            var result = prc.MakeTransformations(finalTransformations, fields);
 
             CsvParser.ParseFieldsIntoCsv(result, "C:\\Users\\mikol\\Documents\\SQLMock-output.csv");
 

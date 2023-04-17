@@ -80,6 +80,88 @@ namespace NaturalSQLParser.Query
             return Transformations;
         }
 
+        public async IAsyncEnumerable<ITransformation> CreateQueryAI()
+        {
+            var api = new OpenAIAPI(Secrets.Credentials.PersonalApiKey);
+            var chat = api.Chat.CreateConversation();
+
+            chat.AppendSystemMessage("You are an assistant which should translate user input into query request, which will be later executed on the given dataset. " +
+                "You will always get a list of options started wtih '--->' from which you can choose the best following option to fulfill the user request. " +
+                "Each choosen word must be separated with one space. " +
+                "When you are finished with processing the query, only send empty string which is translated to END OF QUERY. " +
+                "NOTE THAT YOU MUST RETURN ONLY THE SAME WORDS THAT WERE GIVEN FROM THE SELECTION FOLLOWED BY '--->'");
+
+            Console.WriteLine("Write your query request:");
+            chat.AppendUserInput($"User input is: {Console.ReadLine()};");
+            chat.AppendSystemMessage("Now it is your turn to choose the right operations.");
+
+            string OpenAI_Input;
+            while (true)
+            {
+                // Print all possible transformations
+                var transformationRequest = String.Empty;
+
+                transformationRequest += $"---> Choose next transformation: ";
+                Console.WriteLine($"---> Choose next transformation: ");
+                foreach (var transformation in possibleTransformations)
+                {
+                    transformationRequest += $"{transformation.GetTransformationName()}; ";
+                    Console.Write($"{transformation.GetTransformationName()}; ");
+                }
+                Console.WriteLine();
+
+                // Get the transformation name given by the ChatBot
+                OpenAI_Input = await chat.GetResponseFromChatbotAsync();
+                Console.WriteLine($"Next transformation: {OpenAI_Input}");
+                if (OpenAI_Input is null || OpenAI_Input == "")
+                {
+                    break;
+                }
+
+                // obtain the transformation
+                string transformationName = OpenAI_Input;
+                var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
+
+
+                // Print all possible moves for the transformation
+                chat.AppendUserInput($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                foreach (var move in transformationCandidate.GetNextMoves(this.Response))
+                {
+                    chat.AppendUserInput($"{move}; ");
+                    Console.Write($"{move}; ");
+                }
+                Console.WriteLine();
+
+                // Print all possible arguments for the transformation
+                chat.AppendUserInput($"---> {transformationCandidate.GetArgumentsInstructions()}");
+                Console.WriteLine($"---> {transformationCandidate.GetArgumentsInstructions()}");
+                foreach (var item in transformationCandidate.GetArguments())
+                {
+                    chat.AppendUserInput($"{item}; ");
+                    Console.Write($"{item}; ");
+                }
+                Console.WriteLine();
+
+
+                // Load user input
+                OpenAI_Input = await chat.GetResponseFromChatbotAsync();
+                Console.WriteLine($"Transformation arguments: {OpenAI_Input}");
+
+                // Build transformation preprocess
+                string[] request = OpenAI_Input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                var generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request);
+
+                // Save the transformation
+                Transformations.Add(generatedTransformation);
+
+                // Rebuild the possible response
+                Response = generatedTransformation.Preprocess(Response);
+
+                yield return generatedTransformation;
+            }
+        }
+
         public List<Field> MakeTransformations(IEnumerable<ITransformation> transformations, List<Field> DataSet)
         {
             foreach(ITransformation transformation in transformations)
