@@ -1,4 +1,15 @@
 AI API could be also used to determine the correct data format:
-	- "245 �" is given.
+	- "245 " is given.
 	- Question can be: "From given types, choose the matching option:"
 		- If number, prefix / suffix can be cutoff
+
+Vytvoření specifikace
+	- popsat core
+	- nadefinovat UI
+	- vymyslet interakci uživatele a aplikace
+Přizpůsobení promptu
+Vyladění transformací
+Doplnění dalších transformací
+Vytvoření UI
+	- nejdřív jen na prompt
+	- později i na zobrazování dat
