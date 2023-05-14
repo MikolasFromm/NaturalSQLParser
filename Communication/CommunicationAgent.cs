@@ -14,8 +14,33 @@ namespace NaturalSQLParser.Communication
 
         private OpenAI_API.Chat.Conversation? _chat;
 
+        private void BotIntroduction()
+        {
+            var chatIntro = "You are an assistant which should translate user input into query request, which will be later executed on the given dataset. " +
+                "You will always get a list of options started wtih '--->' from which you can choose the best following option to fulfill the user request. " +
+                "Each choosen word must be separated with one space and all transformation parameters must be on one line." +
+                "When you are finished with processing the query, only send empty string which is translated to END OF QUERY. " +
+                "NOTE THAT YOU MUST RETURN ONLY THE SAME WORDS THAT WERE GIVEN FROM THE SELECTION FOLLOWED BY '--->'";
+
+            if (_verbose)
+                Console.WriteLine($"ChatBot intro: {chatIntro}");
+            
+            _chat.AppendSystemMessage(chatIntro);
+
+            Console.WriteLine("Write your query: ");
+            var userQuery = Console.ReadLine();
+
+            if (_verbose)
+                Console.WriteLine($"User input: {userQuery}");
+
+            _chat.AppendUserInput(userQuery);
+
+            _chat.AppendSystemMessage("Now it is your turn to choose the right operations.");
+        }
+
         /// <summary>
         /// Constructor for OpenAIAPIBot feature. Use when communication with bot required. <see cref="OpenAIAPI"/> should be already initialized with API-token and all related settings.
+        /// Also initializes the chatBot with introduction and gives him the user query input obtained via <see cref="Console"/>.
         /// Creates new local <see cref="OpenAI_API.Chat.Conversation"/> instance.
         /// </summary>
         /// <param name="api">Initialized API for OpenAI bot.</param>
@@ -26,6 +51,7 @@ namespace NaturalSQLParser.Communication
             _mode = CommunicationAgentMode.AIBot;
             _verbose = verbose;
             _chat = _api.Chat.CreateConversation();
+            this.BotIntroduction();
         }
 
         /// <summary>
@@ -56,6 +82,23 @@ namespace NaturalSQLParser.Communication
             if (_mode == CommunicationAgentMode.AIBot)
             {
                 _chat.AppendSystemMessage(message);
+            }
+        }
+
+        /// <summary>
+        /// Adds user input to the system conversation. Relevant only for AIBot mode.
+        /// </summary>
+        /// <param name="message"></param>
+        public void InsertUserMessage(string message)
+        {
+            if (_verbose)
+            {
+                Console.WriteLine(message);
+            }
+
+            if ( _mode == CommunicationAgentMode.AIBot)
+            {
+                _chat.AppendUserInput(message);
             }
         }
 
@@ -91,6 +134,17 @@ namespace NaturalSQLParser.Communication
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// New-line indenting for more readable output. Relevant only for VERBOSE mode.
+        /// </summary>
+        public void Indent()
+        {
+            if (_verbose)
+            {
+                Console.WriteLine();
+            }
         }
     }
 }
