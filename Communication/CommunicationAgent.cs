@@ -75,14 +75,9 @@ namespace NaturalSQLParser.Communication
         /// <param name="message"></param>
         public void InsertSystemMessage(string message)
         {
-            if (_verbose)
-            {
-                Console.WriteLine(message);
-            }
+            Console.WriteLine(message);
             if (_mode == CommunicationAgentMode.AIBot)
-            {
                 _chat.AppendSystemMessage(message);
-            }
         }
 
         /// <summary>
@@ -100,6 +95,17 @@ namespace NaturalSQLParser.Communication
             {
                 _chat.AppendUserInput(message);
             }
+        }
+
+        /// <summary>
+        /// Default Error message "stream". Verbose independent
+        /// </summary>
+        /// <param name="message"></param>
+        public void ErrorMessage(string message)
+        {
+            Console.WriteLine($"ERROR: {message}");
+            if (_mode == CommunicationAgentMode.AIBot)
+                _chat.AppendSystemMessage($"ERROR: {message}");
         }
 
         /// <summary>
@@ -141,10 +147,7 @@ namespace NaturalSQLParser.Communication
         /// </summary>
         public void Indent()
         {
-            if (_verbose)
-            {
-                Console.WriteLine();
-            }
+            Console.WriteLine();
         }
     }
 }
