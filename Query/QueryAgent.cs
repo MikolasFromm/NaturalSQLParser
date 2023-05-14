@@ -44,6 +44,11 @@ namespace NaturalSQLParser.Query
             _communicationAgent = new CommunicationAgent(verbose);
         }
 
+        /// <summary>
+        /// Sequentially parsing query, checking correctness, generating transformations and obtaining necessary arguments for chosen transformations.
+        /// Query mode independant. Using <see cref="CommunicationAgent"/> for comunication with user/bot.
+        /// </summary>
+        /// <returns></returns>
         public IEnumerable<ITransformation> PerformQuery()
         {
             while (true)
