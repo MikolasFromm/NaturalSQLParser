@@ -7,8 +7,12 @@ Vytvoření specifikace
 	- popsat core
 	- nadefinovat UI
 	- vymyslet interakci uživatele a aplikace
+
 Přizpůsobení promptu
+	- musí být možnost se vrátit, pokud byl promt špatně napsaný
+	- přizpůsobit "tečkové" syntax -> tedy že vždy dostanu jen jeden následující krok a já si vyberu: SortBy.FirstName.Asc...
 Vyladění transformací
+	- Vyladění groupování
 Doplnění dalších transformací
 Vytvoření UI
 	- nejdřív jen na prompt
