@@ -186,7 +186,9 @@ namespace NaturalSQLParser.Types.Tranformations
 
     public interface ITransformation
     {
-        public TransformationType Type { get;}
+        public TransformationType Type { get; }
+
+        public bool HasArguments { get; }
 
         /// <summary>
         /// Makes the real final transformation on the given field.
@@ -238,6 +240,8 @@ namespace NaturalSQLParser.Types.Tranformations
     {
         public TransformationType Type => TransformationType.Empty;
 
+        public bool HasArguments => false;
+
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
             return input_fields;
@@ -263,6 +267,8 @@ namespace NaturalSQLParser.Types.Tranformations
     public class DropColumnTransformation : ITransformation
     { 
         public TransformationType Type => TransformationType.DropColumns;
+
+        public bool HasArguments => false;
 
         public HashSet<String> DropHeaderNames { get; set; } = new HashSet<String>();
 
@@ -298,13 +304,15 @@ namespace NaturalSQLParser.Types.Tranformations
             return moves;
         }
 
-        public string GetArgumentsInstructions() => "Empty transformation has no arguments";
+        public string GetArgumentsInstructions() => string.Empty;
 
         public IEnumerable<string> GetArguments() => new List<string>();
     }
 
     public class SortByTransformation : ITransformation
     {
+        public bool HasArguments => true;
+
         public TransformationType Type => TransformationType.SortBy;
 
         public SortDirection Direction { get; set; }
@@ -351,6 +359,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
     public class GroupByTransformation : ITransformation
     {
+        public bool HasArguments => true;
         public TransformationType Type => TransformationType.GroupBy;
 
         public HashSet<string> StringsToGroup { get; set; } = new HashSet<string>();
@@ -512,6 +521,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
     public class FilterByTransformation : ITransformation
     {
+        public bool HasArguments => true;
+
         public TransformationType Type => TransformationType.FilterBy;
 
         public FilterCondition FilterCondition { get; set; }

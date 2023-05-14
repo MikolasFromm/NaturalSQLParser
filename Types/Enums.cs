@@ -55,4 +55,10 @@
         Aggregate,
         Empty
     }
+
+    public enum CommunicationAgentMode
+    {
+        User,
+        AIBot
+    }
 }
