@@ -605,7 +605,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
     public static class Transformator
     {
-        public static List<Field> TransformFields(List<Field> fields, List<ITransformation> transformations)
+        public static List<Field> TransformFields(List<Field> fields, IEnumerable<ITransformation> transformations)
         {
             foreach (var transformation in transformations)
             {
