@@ -59,9 +59,9 @@ namespace NaturalSQLParser.Query
                     string transformationName = string.Empty;
 
                     // Print all possible transformations
-                    _communicationAgent.InsertSystemMessage($"---> Choose next transformation: ");
+                    _communicationAgent.InsertUserMessage($"---> Choose next transformation: ");
                     foreach (var transformation in possibleTransformations)
-                        _communicationAgent.InsertSystemMessage($"> {transformation.GetTransformationName()}");
+                        _communicationAgent.InsertUserMessage($"> {transformation.GetTransformationName()}");
                     _communicationAgent.Indent();
 
                     // Gets the next transformation name
@@ -74,10 +74,10 @@ namespace NaturalSQLParser.Query
                     var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
 
                     // Get the primary instruction for the transformation
-                    _communicationAgent.InsertSystemMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                    _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
                     var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
                     foreach (var move in nextPossibleMoves)
-                        _communicationAgent.InsertSystemMessage($"> {move}");
+                        _communicationAgent.InsertUserMessage($"> {move}");
                     _communicationAgent.Indent();
 
                     // loop until getting satisfying answer
@@ -100,9 +100,9 @@ namespace NaturalSQLParser.Query
                     if (transformationCandidate.HasArguments)
                     {
                         // Get all possible transformations for the transformation
-                        _communicationAgent.InsertSystemMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
+                        _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
                         foreach (var argument in transformationCandidate.GetArguments())
-                            _communicationAgent.InsertSystemMessage($"> {argument}");
+                            _communicationAgent.InsertUserMessage($"> {argument}");
                         _communicationAgent.Indent();
 
                         // loop until getting satisfying answer
@@ -140,6 +140,14 @@ namespace NaturalSQLParser.Query
                     _communicationAgent.Indent();
                 }
                 _communicationAgent.Indent();
+
+                Console.WriteLine("(Enter any key to continue...)");
+                var endIt = Console.ReadLine();
+                if (String.IsNullOrEmpty(endIt))
+                {
+                    _communicationAgent.ShowConversationHistory();
+                    break;
+                }
             }
 
             return _transformations;
