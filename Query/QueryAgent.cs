@@ -56,7 +56,7 @@ namespace NaturalSQLParser.Query
                     // Print all possible transformations
                     _communicationAgent.InsertSystemMessage($"---> Choose next transformation: ");
                     foreach (var transformation in possibleTransformations)
-                        _communicationAgent.InsertSystemMessage($"{transformation.GetTransformationName()}");
+                        _communicationAgent.InsertSystemMessage($"> {transformation.GetTransformationName()}");
                     _communicationAgent.Indent();
 
                     // Gets the next transformation name
@@ -72,7 +72,7 @@ namespace NaturalSQLParser.Query
                     _communicationAgent.InsertSystemMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
                     var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
                     foreach (var move in nextPossibleMoves)
-                        _communicationAgent.InsertSystemMessage($"{move}; ");
+                        _communicationAgent.InsertSystemMessage($"> {move}");
                     _communicationAgent.Indent();
 
                     // loop until getting satisfying answer
@@ -87,7 +87,8 @@ namespace NaturalSQLParser.Query
                         }
                         else
                         {
-                            _communicationAgent.InsertSystemMessage($"ERROR: Invalid input, you must choose from the options given above"); // try again
+                            _communicationAgent.ErrorMessage($"Invalid input, you must choose from the options given above. Pleas try again.");
+                            _communicationAgent.Indent();
                         }
                     }
 
@@ -96,7 +97,7 @@ namespace NaturalSQLParser.Query
                         // Get all possible transformations for the transformation
                         _communicationAgent.InsertSystemMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
                         foreach (var argument in transformationCandidate.GetArguments())
-                            _communicationAgent.InsertSystemMessage($"{argument}; ");
+                            _communicationAgent.InsertSystemMessage($"> {argument}");
                         _communicationAgent.Indent();
 
                         // loop until getting satisfying answer
@@ -115,7 +116,8 @@ namespace NaturalSQLParser.Query
                             }
                             catch(ArgumentException ex)
                             {
-                                _communicationAgent.InsertSystemMessage($"ERROR: {ex.Message}");
+                                _communicationAgent.ErrorMessage($"{ex.Message}. Please try again.");
+                                _communicationAgent.Indent();
                             }
                         }
                     }
@@ -129,8 +131,10 @@ namespace NaturalSQLParser.Query
                 }
                 catch (ArgumentException ex)
                 {
-                    _communicationAgent.InsertSystemMessage($"ERROR: {ex.Message}");
+                    _communicationAgent.ErrorMessage($"{ex.Message}. Please try again.");
+                    _communicationAgent.Indent();
                 }
+                _communicationAgent.Indent();
             }
 
             return _transformations;
