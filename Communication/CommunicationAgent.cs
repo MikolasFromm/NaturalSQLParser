@@ -1,5 +1,8 @@
 ﻿using NaturalSQLParser.Types.Enums;
 using OpenAI_API;
+using OpenAI_API.Chat;
+using OpenAI_API.Completions;
+using OpenAI_API.Models;
 using System.Diagnostics.Tracing;
 
 namespace NaturalSQLParser.Communication
@@ -16,16 +19,13 @@ namespace NaturalSQLParser.Communication
 
         private void BotIntroduction()
         {
-            var chatIntro = "You are an assistant which should translate user input into query request, which will be later executed on the given dataset. " +
-                "You will always get a list of options started wtih '--->' from which you can choose the best following option to fulfill the user request. " +
-                "Each choosen word must be separated with one space and all transformation parameters must be on one line." +
-                "When you are finished with processing the query, only send empty string which is translated to END OF QUERY. " +
-                "NOTE THAT YOU MUST RETURN ONLY THE SAME WORDS THAT WERE GIVEN FROM THE SELECTION FOLLOWED BY '--->'";
 
-            if (_verbose)
-                Console.WriteLine($"ChatBot intro: {chatIntro}");
-            
-            _chat.AppendSystemMessage(chatIntro);
+            _chat.AppendSystemMessage("You are an assistant who should translate given user input into a query request.");
+            _chat.AppendSystemMessage("You always get instructions and options from which you can choose and what you need to write.");
+            _chat.AppendSystemMessage("You must use at most 2 words only from the selection given.");
+            _chat.AppendSystemMessage("But usually use just one word.");
+            _chat.AppendSystemMessage("You can not use any other words than the ones given from the user input.");
+            _chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
 
             Console.WriteLine("Write your query: ");
             var userQuery = Console.ReadLine();
@@ -33,9 +33,7 @@ namespace NaturalSQLParser.Communication
             if (_verbose)
                 Console.WriteLine($"User input: {userQuery}");
 
-            _chat.AppendUserInput(userQuery);
-
-            _chat.AppendSystemMessage("Now it is your turn to choose the right operations.");
+            _chat.AppendSystemMessage($"Query: {userQuery}");
         }
 
         /// <summary>
@@ -50,7 +48,12 @@ namespace NaturalSQLParser.Communication
             _api = api;
             _mode = CommunicationAgentMode.AIBot;
             _verbose = verbose;
+
             _chat = _api.Chat.CreateConversation();
+            _chat.RequestParameters.Temperature = 0;
+            _chat.RequestParameters.TopP = 0;
+            _chat.RequestParameters.Model = Model.ChatGPTTurbo;
+
             this.BotIntroduction();
         }
 
@@ -75,7 +78,9 @@ namespace NaturalSQLParser.Communication
         /// <param name="message"></param>
         public void InsertSystemMessage(string message)
         {
-            Console.WriteLine(message);
+            if (_verbose)
+                Console.WriteLine(message);
+
             if (_mode == CommunicationAgentMode.AIBot)
                 _chat.AppendSystemMessage(message);
         }
@@ -86,15 +91,10 @@ namespace NaturalSQLParser.Communication
         /// <param name="message"></param>
         public void InsertUserMessage(string message)
         {
-            if (_verbose)
-            {
-                Console.WriteLine(message);
-            }
+            Console.WriteLine(message);
 
             if ( _mode == CommunicationAgentMode.AIBot)
-            {
                 _chat.AppendUserInput(message);
-            }
         }
 
         /// <summary>
@@ -103,9 +103,11 @@ namespace NaturalSQLParser.Communication
         /// <param name="message"></param>
         public void ErrorMessage(string message)
         {
-            Console.WriteLine($"ERROR: {message}");
+            if (_mode == CommunicationAgentMode.User)
+                Console.WriteLine($"ERROR: {message}");
+
             if (_mode == CommunicationAgentMode.AIBot)
-                _chat.AppendSystemMessage($"ERROR: {message}");
+                this.InsertUserMessage($"ERROR: {message}");
         }
 
         /// <summary>
@@ -140,6 +142,20 @@ namespace NaturalSQLParser.Communication
             }
 
             return string.Empty;
+        }
+
+        /// <summary>
+        /// Show the whole conversation history with chatbot.
+        /// </summary>
+        public void ShowConversationHistory()
+        {
+            if (_mode == CommunicationAgentMode.AIBot)
+            {
+                foreach (var message in _chat.Messages)
+                {
+                    Console.WriteLine($"{message.Role}: {message.Content}");
+                }
+            }
         }
 
         /// <summary>
