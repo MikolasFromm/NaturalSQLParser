@@ -1,10 +1,10 @@
-﻿using System;
-using System.Data;
-using NaturalSQLParser.Types.Enums;
+﻿using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Query;
 using NaturalSQLParser.Types;
 using NaturalSQLParser.Parser;
 using NaturalSQLParser.Types.Tranformations;
+using NaturalSQLParser.Query.Secrets;
+using OpenAI_API;
 
 namespace NaturalSQLParser
 {
@@ -21,21 +21,12 @@ namespace NaturalSQLParser
                 new Field() { Header = new Header("Department", FieldDataType.String,3), Data = new List<Cell>() { new Cell() { Content = "IT", Index = 0 }, new Cell() { Content = "HR", Index = 1 }, new Cell() { Content = "CEO", Index = 2 } } }
             };
 
-            var prc = new Processor();
             var fields = CsvParser.ParseCsvFile("C:\\Users\\mikol\\Documents\\SQLMock.csv");
-            prc.Response = new List<EmptyField>(fields);
 
-            //// USER INPUT
-            //var transformations = prc.CreateQuery();
-            //var result = prc.MakeTransformations(transformations, fields);
-
-            List<ITransformation> finalTransformations = new List<ITransformation>();
-            // AI INPUT
-            await foreach (var item in prc.CreateQueryAI())
-            {
-                finalTransformations.Add(item);
-            }
-            var result = prc.MakeTransformations(finalTransformations, fields);
+            var api = new OpenAIAPI(Credentials.PersonalApiKey);
+            var query = new QueryAgent(fields);
+            var transformations = query.PerformQuery();
+            var result = Transformator.TransformFields(fields, transformations);
 
             CsvParser.ParseFieldsIntoCsv(result, "C:\\Users\\mikol\\Documents\\SQLMock-output.csv");
 
