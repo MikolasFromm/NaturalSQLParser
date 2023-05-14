@@ -4,6 +4,7 @@ using NaturalSQLParser.Types.Tranformations;
 
 using OpenAI_API;
 using OpenAI_API.Chat;
+using System.ComponentModel.Design;
 
 namespace NaturalSQLParser.Query
 {
@@ -27,60 +28,102 @@ namespace NaturalSQLParser.Query
             string userInput;
             while (true)
             {
-                // Print all possible transformations
-                Console.WriteLine($"---> Choose next transformation: ");
-                foreach (var transformation in possibleTransformations)
+                try
                 {
-                    Console.Write($"{transformation.GetTransformationName()}; ");
-                }
-                Console.WriteLine();
+                    // Print all possible transformations
+                    Console.WriteLine($"---> Choose next transformation: ");
+                    foreach (var transformation in possibleTransformations)
+                        Console.Write($"{transformation.GetTransformationName()}; ");
+                    Console.WriteLine();
 
-                // Read the transformation name given by the user
-                userInput = Console.ReadLine();
-                if (userInput is null || userInput == "")
+                    // Read the transformation name given by the user
+                    userInput = Console.ReadLine();
+                    if (userInput is null || userInput == "")
+                        break;
+
+                    // obtain the transformation
+                    string transformationName = userInput;
+                    var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
+
+                    string[] request = new string[1];
+                    Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                    var moves = transformationCandidate.GetNextMoves(this.Response).ToList();
+                    var nextMove = string.Empty;
+
+                    while (true)
+                    {
+                        // Print all possible moves for the transformation
+                        foreach (var move in transformationCandidate.GetNextMoves(this.Response))
+                        {
+                            Console.Write($"{move}; ");
+                            moves.Add(move);
+                        }
+                        Console.WriteLine();
+
+                        nextMove = Console.ReadLine();
+
+                        if (nextMove is not null && moves.Contains(nextMove))
+                            break;
+                        else
+                            Console.WriteLine("---> Invalid input, choose from the following:");
+                    }
+
+                    request[0] = nextMove;
+
+                    ITransformation generatedTransformation;
+                    if (transformationCandidate.HasArguments)
+                    {
+                        // Print all possible arguments for the transformation
+                        Console.WriteLine($"---> {transformationCandidate.GetArgumentsInstructions()}");
+                        var arguments = transformationCandidate.GetArguments().ToList();
+                        
+                        while (true)
+                        {
+                            foreach (var item in transformationCandidate.GetArguments())
+                            {
+                                Console.Write($"{item}; ");
+                            }
+                            Console.WriteLine();    
+
+                            // Load user input
+                            userInput = Console.ReadLine();
+
+                            // Build transformation preprocess
+                            string[] arguemnts = userInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                            try
+                            {
+                                generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request.Concat(arguemnts).ToArray());
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e.Message);
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request);
+                    }
+
+                    // Save the transformation
+                    Transformations.Add(generatedTransformation);
+
+                    // Rebuild the possible response
+                    Response = generatedTransformation.Preprocess(Response);
+                }
+                catch(Exception ex)
                 {
-                    break;
+                    Console.WriteLine(ex.Message);
                 }
-
-                // obtain the transformation
-                string transformationName = userInput;
-                var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
-
-
-                // Print all possible moves for the transformation
-                Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");
-                foreach (var move in transformationCandidate.GetNextMoves(this.Response))
-                {
-                    Console.Write($"{move}; ");
-                }
-                Console.WriteLine();
-
-                // Print all possible arguments for the transformation
-                Console.WriteLine($"---> {transformationCandidate.GetArgumentsInstructions()}");
-                foreach (var item in transformationCandidate.GetArguments())
-                {
-                    Console.Write($"{item}; ");
-                }
-                Console.WriteLine();
-
-
-                // Load user input
-                userInput = Console.ReadLine();
-
-                // Build transformation preprocess
-                string[] request = userInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                var generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request);
                 
-                // Save the transformation
-                Transformations.Add(generatedTransformation);
-
-                // Rebuild the possible response
-                Response = generatedTransformation.Preprocess(Response);
             }
             return Transformations;
         }
 
-        public async IAsyncEnumerable<ITransformation> CreateQueryAI()
+        public async IAsyncEnumerable<ITransformation> CreateAIQueryAsync()
         {
             var api = new OpenAIAPI(Secrets.Credentials.PersonalApiKey);
             var chat = api.Chat.CreateConversation();
@@ -95,82 +138,102 @@ namespace NaturalSQLParser.Query
             chat.AppendUserInput($"User input is: {Console.ReadLine()};");
             chat.AppendSystemMessage("Now it is your turn to choose the right operations.");
 
-            string OpenAI_Input;
+            string BotResponse;
             while (true)
             {
                 ITransformation generatedTransformation = null;
                 try
                 {
                     // Print all possible transformations
-                    var transformationRequest = String.Empty;
-
-                    transformationRequest += $"---> Choose next transformation: ";
                     Console.WriteLine($"---> Choose next transformation: ");
+                    chat.AppendSystemMessage($"---> Choose next transformation: ");
                     foreach (var transformation in possibleTransformations)
                     {
-                        transformationRequest += $"{transformation.GetTransformationName()}; ";
                         Console.Write($"{transformation.GetTransformationName()}; ");
+                        chat.AppendSystemMessage($"{transformation.GetTransformationName()}; ");
                     }
                     Console.WriteLine();
 
-                    // Get the transformation name given by the ChatBot
-                    OpenAI_Input = await chat.GetResponseFromChatbotAsync();
-                    Console.WriteLine($"Next transformation: {OpenAI_Input}");
-                    if (OpenAI_Input is null || OpenAI_Input == "")
-                    {
+                    // Read the transformation name given by the user
+                    BotResponse = await chat.GetResponseFromChatbotAsync();
+                    if (BotResponse is null || BotResponse == "")
                         break;
-                    }
 
                     // obtain the transformation
-                    string transformationName = OpenAI_Input;
+                    string transformationName = BotResponse;
                     var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
 
-
-                    // Print all possible moves for the transformation
-                    chat.AppendUserInput($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                    string[] request = new string[1];
                     Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");
-                    foreach (var move in transformationCandidate.GetNextMoves(this.Response))
+                    var moves = transformationCandidate.GetNextMoves(this.Response).ToList();
+                    var nextMove = string.Empty;
+
+                    while (true)
                     {
-                        chat.AppendUserInput($"{move}; ");
-                        Console.Write($"{move}; ");
-                    }
-                    Console.WriteLine();
+                        // Print all possible moves for the transformation
+                        foreach (var move in transformationCandidate.GetNextMoves(this.Response))
+                        {
+                            Console.Write($"{move}; ");
+                            moves.Add(move);
+                        }
+                        Console.WriteLine();
 
-                    // Print all possible arguments for the transformation
-                    chat.AppendUserInput($"---> {transformationCandidate.GetArgumentsInstructions()}");
-                    Console.WriteLine($"---> {transformationCandidate.GetArgumentsInstructions()}");
-                    foreach (var item in transformationCandidate.GetArguments())
+                        nextMove = Console.ReadLine();
+
+                        if (nextMove is not null && moves.Contains(nextMove))
+                            break;
+                        else
+                            Console.WriteLine("---> Invalid input, choose from the following:");
+                    }
+
+                    request[0] = nextMove;
+                    if (transformationCandidate.HasArguments)
                     {
-                        chat.AppendUserInput($"{item}; ");
-                        Console.Write($"{item}; ");
+                        // Print all possible arguments for the transformation
+                        Console.WriteLine($"---> {transformationCandidate.GetArgumentsInstructions()}");
+                        var arguments = transformationCandidate.GetArguments().ToList();
+
+                        while (true)
+                        {
+                            foreach (var item in transformationCandidate.GetArguments())
+                            {
+                                Console.Write($"{item}; ");
+                            }
+                            Console.WriteLine();
+
+                            // Load user input
+                            BotResponse = Console.ReadLine();
+
+                            // Build transformation preprocess
+                            string[] arguemnts = BotResponse.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+                            try
+                            {
+                                generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request.Concat(arguemnts).ToArray());
+                                break;
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e.Message);
+                            }
+
+                        }
                     }
-                    Console.WriteLine();
-
-
-                    // Load user input
-                    OpenAI_Input = await chat.GetResponseFromChatbotAsync();
-                    Console.WriteLine($"Transformation arguments: {OpenAI_Input}");
-
-                    // Build transformation preprocess
-                    string[] request = OpenAI_Input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request);
-
-                    // Save the transformation
-                    Transformations.Add(generatedTransformation);
+                    else
+                    {
+                        generatedTransformation = TransformationFactory.BuildTransformation(transformationName, request);
+                    }
 
                     // Rebuild the possible response
                     Response = generatedTransformation.Preprocess(Response);
+
                 }
-                catch (ArgumentException ex)
+                catch (Exception ex)
                 {
-                    chat.AppendUserInput(ex.Message);
                     Console.WriteLine(ex.Message);
                 }
-
                 if (generatedTransformation is not null)
-                {
                     yield return generatedTransformation;
-                }
             }
         }
 
