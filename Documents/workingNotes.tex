@@ -1,0 +1,80 @@
+\documentclass[12pt]{article}
+
+\usepackage{amsmath}
+
+\usepackage{graphicx}
+
+\usepackage{hyperref}
+
+\usepackage{adjustbox}
+
+\usepackage[utf8]{inputenc}
+
+\title{Natural Language Processing Assistant - Working Notes}
+
+\author{Mikoláš Fromm}
+
+\date{29.7.2023}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+The goal of this project is to create a program that will be able to process natural language queries and translate them into SQL-like language, which will then be executed on a database. The main goal of this project is to work with a natural language and find the best way to parse it with today's favorite language models into custom-made query language. In order to achieve it, an OpenAI ChatBot API will be used to transform the language into a well-defined syntax which is necessary to execute the query.
+
+
+\section{Basic approaches}
+
+At the beginning before executing any transformation, a user is prompted to enter a whole command describing what to achieve as a result. This command is entirely in a natural language form, for example: \begin{quotation}\textit{Sort it by the name, drop those with age under 18 and group them by their gender.}\end{quotation} which should be translated into something similar to: \begin{quotation}SortBy."Name".FilterBy."Age".\begin{math}>=\end{math}."18".GroupBy."Gender".\end{quotation}
+
+As you can see, the form of the \textit{executable} command is still very well readable, allowing the user to step into forming such a command in the middle of the process and continue by its own. 
+
+Every transformation has a defined output type, which determines what following operations are executable. Therefore, when creating such a command, the application suggests a list of all available transformations and its optional arguments after each step. For example after submitting \textit{SortBy} it will suggest \textit{Name} and \textit{Age} as possible arguments.
+The language processing assistant should be therefore capable of forming the final command entirely by itself, but also allow the user to step in and just whisper the missing (and best fitting) parts of the command.
+
+\subsection{Matching words}
+
+Since every transformation has its unique name, we might try to ask the LM to return exactly one name of a transformation from a given collection which is the closest to the next step to form the final result. This is the simplest approach, but it is also the most error-prone. The LM should be able to return the correct transformation name in most cases. However, it is difficult sometimes to convince the LM to answer only a single word from the given collection, especially when the collection does not contain perfectly fitting option. Let me illustrate it on an example, where the user input was as follows: \textit{Sort by name and group by hometown.}
+
+\begin{enumerate}
+    \item[First collection:]\textit{SortBy, FilterBy, GroupBy, DropColumn}
+    \item[LM choice:]\textit{SortBy}
+    \item[Second collection:]\textit{FirstName, LastName, Age, Hometown (content dependant)} 
+    \item[LM choice:]\textit{name}
+    \item[ERROR:]\textit{Invalid input, you must choose from the options given above. Please try again.}
+    \item[LM choice:]\textit{Sorry about that. Here are the options again: \begin{math}
+        \newline
+        > First Name
+        \newline
+        > LastName
+        \newline
+        > Age
+        \newline
+        > Department
+        \newline
+        > Gender
+        \newline
+        > HomeTown
+        \newline
+        \end{math}} 
+\end{enumerate}
+
+\pagebreak
+
+As shown in the example, when the LM mismatches the answer, it starts generating longer answers which are intended to help the user to form the correct answer. However, this is not the desired behavior, since the user is not supposed to be asked twice for the same thing, nor does the user need to get his options repeated. Most importantly, in the fully autonomous mode, where only the LM forms the final query, this is the dead end. The LM should be able to return the correct answer in the first place.
+
+Sometimes it also happens that the LM returns a word semantically similar to what is contained in the collection, but which differs syntactically. For example, when the user input is \textit{Sort by name and group by hometown.} and the collection is \textit{FirstName, LastName, Age, Hometown}, the LM might return \textit{First Name} instead of \textit{FirstName}. This also is an error behavior, since the \textit{word-matching} approach requires the LM to return exactly the same word as it is in the collection.
+
+\subsection{Indexing}
+
+Therefore, it seems promising to index each option in the collection of next moves and ask the LM to only pick the best fitting option and return its index. This way, the LM is not forced to return the exact word, which might eliminate many potential errors. 
+
+Unfortunately, this approach does not help when the LM is asked to return a real word which is not straightly related to the database. For example the usage of \textit{FilterBy} requires two arguments: \textit{relation} and \textit{right side of the relation}, where the \textit{right side} might be any meaningful word, for example:
+\begin{quotation}
+    \textit{FilterBy.Age.\begin{math}>=\end{math}.18.}
+\end{quotation}
+Therefore, the LM is not able to return the index of the \textit{right side} argument, since it is not contained in the collection of possible options.
+
+\end{document}
