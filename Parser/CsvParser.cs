@@ -58,7 +58,7 @@ namespace NaturalSQLParser.Parser
         public static void ParseFieldsIntoCsv(IEnumerable<Field> fields, string outputFilePath)
         {
             using(var writer  = new StreamWriter(outputFilePath))
-            using(var csv = new CsvWriter(writer, CultureInfo.CurrentCulture))
+            using(var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
                 var fieldList = new List<Field>();
                 foreach (var field in fields)

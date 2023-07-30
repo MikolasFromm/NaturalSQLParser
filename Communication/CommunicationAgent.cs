@@ -1,4 +1,6 @@
-﻿using NaturalSQLParser.Types.Enums;
+﻿#define INDEXING
+
+using NaturalSQLParser.Types.Enums;
 using OpenAI_API;
 using OpenAI_API.Chat;
 using OpenAI_API.Completions;
@@ -21,10 +23,19 @@ namespace NaturalSQLParser.Communication
         {
 
             _chat.AppendSystemMessage("You are an assistant who should translate given user input into a query request.");
-            _chat.AppendSystemMessage("You always get instructions and options from which you can choose and what you need to write.");
-            _chat.AppendSystemMessage("You must use at most 2 words only from the selection given.");
-            _chat.AppendSystemMessage("But usually use just one word.");
-            _chat.AppendSystemMessage("You can not use any other words than the ones given from the user input.");
+            _chat.AppendSystemMessage("You always get instructions and options from which you can choose.");
+
+#if WORD_MATCHING
+            _chat.AppendSystemMessage("You must use at most 2 words only from the selection given."); // default PerformQuery
+            _chat.AppendSystemMessage("But usually use just one word."); // default PerformQuery
+            _chat.AppendSystemMessage("You can not use any other words than the ones given from the user input."); // default PerformQuery
+#endif
+
+#if INDEXING
+            _chat.AppendSystemMessage("You write your choice as a number from the [] brackets. Dont write anything else!"); // extension PerformQueryWithIndices
+            _chat.AppendSystemMessage("Only when you are asked to write a word, you can write any word you want."); // extension PerformQueryWithIndices
+#endif
+
             _chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
 
             Console.WriteLine("Write your query: ");
@@ -52,7 +63,7 @@ namespace NaturalSQLParser.Communication
             _chat = _api.Chat.CreateConversation();
             _chat.RequestParameters.Temperature = 0;
             _chat.RequestParameters.TopP = 0;
-            _chat.RequestParameters.Model = Model.ChatGPTTurbo;
+            _chat.RequestParameters.Model = Model.ChatGPTTurbo0301;
 
             this.BotIntroduction();
         }

@@ -43,7 +43,7 @@ namespace NaturalSQLParser.Query
 
                     // obtain the transformation
                     string transformationName = userInput;
-                    var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
+                    var transformationCandidate = TransformationFactory.Create(transformationName);
 
                     string[] request = new string[1];
                     Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");
@@ -161,7 +161,7 @@ namespace NaturalSQLParser.Query
 
                     // obtain the transformation
                     string transformationName = BotResponse;
-                    var transformationCandidate = TransformationFactory.GetTransformationCandidate(transformationName);
+                    var transformationCandidate = TransformationFactory.Create(transformationName);
 
                     string[] request = new string[1];
                     Console.WriteLine($"---> {transformationCandidate.GetNextMovesInstructions()}");

@@ -1,6 +1,6 @@
-﻿using NaturalSQLParser.Types.Enums;
+﻿#define INDEXING
+
 using NaturalSQLParser.Query;
-using NaturalSQLParser.Types;
 using NaturalSQLParser.Parser;
 using NaturalSQLParser.Types.Tranformations;
 using NaturalSQLParser.Query.Secrets;
@@ -27,7 +27,15 @@ namespace NaturalSQLParser
                 queryAgent = new QueryAgent(fields);
 
             // perform query
+
+#if WORD_MATCHING
             var transformations = queryAgent.PerformQuery();
+#endif
+
+#if INDEXING
+            var transformations = queryAgent.PerformQueryWithIndices();
+#endif
+
             var result = Transformator.TransformFields(fields, transformations);
 
             // save result to file

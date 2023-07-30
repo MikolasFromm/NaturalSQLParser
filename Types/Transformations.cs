@@ -63,7 +63,7 @@ namespace NaturalSQLParser.Types.Tranformations
         /// <param name="transformation">String representation of the transformation</param>
         /// <returns></returns>
         /// <exception cref="ArgumentException">When unknown transformation given.</exception>
-        public static ITransformation GetTransformationCandidate(string transformation)
+        public static ITransformation Create(string transformation)
         {
             switch (transformation)
             {
@@ -82,9 +82,28 @@ namespace NaturalSQLParser.Types.Tranformations
             }
         }
 
+        public static ITransformation CreateByIndex(int index)
+        {
+            switch (index)
+            {
+                case 0:
+                    return new EmptyTransformation();
+                case 1:
+                    return new DropColumnTransformation();
+                case 2:
+                    return new SortByTransformation();
+                case 3:
+                    return new GroupByTransformation();
+                case 4:
+                    return new FilterByTransformation();
+                default:
+                    throw new ArgumentException("Unknown transformation");
+            }
+        }
+
         /// <summary>
         /// Transformation builder, which already expects all input arguments in given order and in corrent format.
-        /// It is expected that user first calls <see cref="GetTransformationCandidate(string)"/> to obtain all moves and arguments.
+        /// It is expected that user first calls <see cref="Create(string)"/> to obtain all moves and arguments.
         /// </summary>
         /// <param name="transformation"><see cref="String"/> representation of a transformation.</param>
         /// <param name="args">All arguments given for the transformation.</param>
@@ -95,89 +114,105 @@ namespace NaturalSQLParser.Types.Tranformations
             switch (transformation)
             {
                 case "Empty":
-                    var emptyTrans = new EmptyTransformation();
-                    return emptyTrans;
+                case "0":
+                    return new EmptyTransformation();
 
                 case "DropColumn":
+                case "1":
                     if (args.Length < 1)
                         throw new ArgumentException("Not enough arguments for DropColumn transformation");
 
-                    var dropTrans = new DropColumnTransformation();
+                    HashSet<string> dropColumns = new();
+                    
                     foreach (var arg in args)
-                        dropTrans.DropHeaderNames.Add(arg);
-                    return dropTrans;
+                        dropColumns.Add(arg);
+
+                    return new DropColumnTransformation(dropColumns);
 
                 case "SortBy":
+                case "2":
                     if (args.Length < 2)
                         throw new ArgumentException("Not enough arguments for SortBy transformation");
 
-                    var sortTrans = new SortByTransformation();
-                    sortTrans.SortByHeaderName = args[0]; // gets the header of the field by which to sort
+                    SortDirection direction = SortDirection.Ascending;
+                    string headerName = args[0]; // gets the header of the field by which to sort
+
                     if (args[1] == "Asc") // if ascending or descending
-                        sortTrans.Direction = SortDirection.Ascending;
+                        direction = SortDirection.Ascending;
                     else if (args[1] == "Desc") // if ascending or descending
-                        sortTrans.Direction = SortDirection.Descending;
+                        direction = SortDirection.Descending;
                     else
                         throw new ArgumentException($"SortDirection \"{args[1]}\" unrecognized");
-                    return sortTrans;
+
+                    return new SortByTransformation(headerName, direction);
 
                 case "GroupBy":
+                case "3":
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for GroupBy transformation");
-                    
-                    var groupTrans = new GroupByTransformation();
 
-                    groupTrans.TargetHeaderName = args[0]; // gets the header of the field by which to group
+                    Agregation agregation = new();
+                    string targetHeader = string.Empty;
+                    HashSet<string> groups = new();
+
+
+                    targetHeader = args[0]; // gets the header of the field by which to group
                     if (args[1] == "Sum")
-                        groupTrans.GroupAgregation = Agregation.Sum;
+                        agregation = Agregation.Sum;
                     else if (args[1] == "Avg")
-                        groupTrans.GroupAgregation = Agregation.Mean;
+                        agregation = Agregation.Mean;
                     else if (args[1] == "Concat")
-                        groupTrans.GroupAgregation = Agregation.ConcatValues;
+                        agregation = Agregation.ConcatValues;
                     else if (args[1] == "CountDistinct")
-                        groupTrans.GroupAgregation = Agregation.CountDistinct;
+                        agregation = Agregation.CountDistinct;
                     else if (args[1] == "CountAll")
-                        groupTrans.GroupAgregation = Agregation.CountAll;
+                        agregation = Agregation.CountAll;
                     else if (args[1] == "GroupKey")
-                        groupTrans.GroupAgregation = Agregation.GroupKey;
+                        agregation = Agregation.GroupKey;
                     else
                         throw new ArgumentException($"Agregation \"{args[1]}\" not supported");
+
                     for(int i = 2; i < args.Length; i++)
-                        groupTrans.StringsToGroup.Add(args[i]);
-                    return groupTrans;
+                        groups.Add(args[i]);
+
+                    return new GroupByTransformation(groups, agregation, targetHeader);
 
                 case "FilterBy":
+                case "4":
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for FilterBy transformation");
-                    
-                    var filterTrans = new FilterByTransformation();
-                    filterTrans.FilterCondition.SourceHeaderName = args[1];
+
+                    FilterCondition filter = new();
+
+                    filter.SourceHeaderName = args[1];
 
                     if (args[1] == "==")
                     {
-                        filterTrans.FilterCondition.Relation = Relation.Equals;
-                        filterTrans.FilterCondition.Condition = args[2];
+                        filter.Relation = Relation.Equals;
+                        filter.Condition = args[2];
                     }
                     else if (args[1] == "!=")
                     {
-                        filterTrans.FilterCondition.Relation = Relation.NotEquals;
-                        filterTrans.FilterCondition.Condition = args[2];
+                        filter.Relation = Relation.NotEquals;
+                        filter.Condition = args[2];
                     }
                     else if (args[1] == "<")
                     {
-                        filterTrans.FilterCondition.Relation = Relation.LessThan;
-                        filterTrans.FilterCondition.Condition = args[2];
+                        filter.Relation = Relation.LessThan;
+                        filter.Condition = args[2];
                     }
                     else if (args[1] == ">")
                     {
-                        filterTrans.FilterCondition.Relation = Relation.GreaterThan;
-                        filterTrans.FilterCondition.Condition = args[2];
+                        filter.Relation = Relation.GreaterThan;
+                        filter.Condition = args[2];
                     }
                     else
                     {
                         throw new ArgumentException($"Operation \"{args[0]}\" not supported");
                     }
-                    return filterTrans;
+                    
+                    return new FilterByTransformation(filter);
+
                 default:
                     throw new ArgumentException($"Transformation \"{transformation}\" not supported");
             }
@@ -189,6 +224,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public TransformationType Type { get; }
 
         public bool HasArguments { get; }
+
+        public bool HasFollowingHumanArguments { get; }
 
         /// <summary>
         /// Makes the real final transformation on the given field.
@@ -234,6 +271,8 @@ namespace NaturalSQLParser.Types.Tranformations
         /// </summary>
         /// <returns></returns>
         public IEnumerable<string> GetArguments();
+
+        public string GetFollowingHumanArgumentsInstructions();
     }
 
     public class EmptyTransformation : ITransformation
@@ -241,6 +280,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public TransformationType Type => TransformationType.Empty;
 
         public bool HasArguments => false;
+
+        public bool HasFollowingHumanArguments => false;
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
@@ -258,9 +299,11 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public IEnumerable<string> GetNextMoves(IEnumerable<EmptyField> fields) => new List<string>();
 
-        public string GetArgumentsInstructions() => "Empty transformation has no arguments";
+        public string GetArgumentsInstructions() => string.Empty;
 
         public IEnumerable<string> GetArguments() => new List<string>();
+
+        public string GetFollowingHumanArgumentsInstructions() => string.Empty;
 
     }
 
@@ -270,7 +313,16 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public bool HasArguments => false;
 
+        public bool HasFollowingHumanArguments => false;
+
         public HashSet<String> DropHeaderNames { get; set; } = new HashSet<String>();
+
+        public DropColumnTransformation(HashSet<string> dropHeaderNames)
+        {
+            DropHeaderNames = dropHeaderNames;
+        }
+
+        internal DropColumnTransformation() { }
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
@@ -307,17 +359,29 @@ namespace NaturalSQLParser.Types.Tranformations
         public string GetArgumentsInstructions() => string.Empty;
 
         public IEnumerable<string> GetArguments() => new List<string>();
+
+        public string GetFollowingHumanArgumentsInstructions() => string.Empty;
     }
 
     public class SortByTransformation : ITransformation
     {
         public bool HasArguments => true;
 
+        public bool HasFollowingHumanArguments => false;
+
         public TransformationType Type => TransformationType.SortBy;
 
         public SortDirection Direction { get; set; }
 
         public String SortByHeaderName { get; set; }
+
+        public SortByTransformation(String sortByHeaderName, SortDirection direction)
+        {
+            SortByHeaderName = sortByHeaderName;
+            Direction = direction;
+        }
+
+        internal SortByTransformation() { }
 
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
@@ -355,11 +419,16 @@ namespace NaturalSQLParser.Types.Tranformations
         public string GetArgumentsInstructions() => "Choose whether the sorting should be ascending or descending";
 
         public IEnumerable<string> GetArguments() => new List<string> { "Asc", "Desc" };
+
+        public string GetFollowingHumanArgumentsInstructions() => string.Empty;
     }
 
     public class GroupByTransformation : ITransformation
     {
         public bool HasArguments => true;
+
+        public bool HasFollowingHumanArguments => false;
+
         public TransformationType Type => TransformationType.GroupBy;
 
         public HashSet<string> StringsToGroup { get; set; } = new HashSet<string>();
@@ -368,6 +437,14 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public String TargetHeaderName { get; set; }
 
+        public GroupByTransformation(HashSet<string> stringsToGroup, Agregation groupAgregation, string targetHeaderName)
+        {
+            StringsToGroup = stringsToGroup;
+            GroupAgregation = groupAgregation;
+            TargetHeaderName = targetHeaderName;
+        }
+
+        internal GroupByTransformation() { }
         public List<Field> PerformTransformation(List<Field> fields)
         {
             Field? field = fields.FirstOrDefault(x => x.Header.Name == TargetHeaderName);
@@ -514,18 +591,29 @@ namespace NaturalSQLParser.Types.Tranformations
             return moves;
         }
 
-        public string GetArgumentsInstructions() => "Write by which STRING you want to group the dataset and choose one of the following Agregations you want to apply on the grouped dataset";
+        public string GetArgumentsInstructions() => "Choose one of the following Agregations you want to apply on the grouped dataset";
 
         public IEnumerable<string> GetArguments() => new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
+
+        public string GetFollowingHumanArgumentsInstructions() => string.Empty;
     }
 
     public class FilterByTransformation : ITransformation
     {
         public bool HasArguments => true;
 
+        public bool HasFollowingHumanArguments => true;
+
         public TransformationType Type => TransformationType.FilterBy;
 
         public FilterCondition FilterCondition { get; set; }
+
+        public FilterByTransformation(FilterCondition filterCondition)
+        {
+            FilterCondition = filterCondition;
+        }
+
+        internal FilterByTransformation() { }
 
         public List<Field> PerformTransformation(List<Field> fields)
         {
@@ -598,9 +686,11 @@ namespace NaturalSQLParser.Types.Tranformations
             return moves;
         }
 
-        public string GetArgumentsInstructions() => "Choose one of the following Relations you want to apply on the filtered dataset and fill the right side of the relation";
+        public string GetArgumentsInstructions() => "Choose one of the following Relations you want to apply on the filtered dataset";
 
         public IEnumerable<string> GetArguments() => new List<string> { "==", "!=", "<", ">" };
+
+        public string GetFollowingHumanArgumentsInstructions() => "Write down the right side of the relation.";
     }
 
     public static class Transformator
