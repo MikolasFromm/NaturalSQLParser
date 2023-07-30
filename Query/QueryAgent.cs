@@ -129,6 +129,7 @@ namespace NaturalSQLParser.Query
                     else
                     {
                         generatedTransformation = TransformationFactory.BuildTransformation(transformationName, new string[] { nextMove });
+                        _transformations.Add(generatedTransformation);
                     }
 
                     // rebuild the possible response
@@ -271,7 +272,7 @@ namespace NaturalSQLParser.Query
                             // act
                             if (isNotNullOrEmpty && isInt && isInRange)
                             {
-                                firstArgument = transformationCandidate.GetArguments().ElementAt(choice);
+                                firstArgument = transformationCandidate.GetArgumentAt(choice);
                                 break; // go to next stage
                             }
                             else
@@ -310,7 +311,7 @@ namespace NaturalSQLParser.Query
                                 // act
                                 if (isNotNullOrEmpty)
                                 {
-                                    secondArgument = transformationCandidate.GetFollowingHumanArgumentsInstructions();
+                                    secondArgument = response;
                                     break; // go to next stage
                                 }
                                 else
@@ -325,6 +326,7 @@ namespace NaturalSQLParser.Query
 
                     // build the transformation
                     generatedTransformation = TransformationFactory.BuildTransformation(transformationName, new string[] { nextMove, firstArgument, secondArgument });
+                    _transformations.Add(generatedTransformation);
 
                     // rebuild the possible response
                     _response = generatedTransformation.Preprocess(_response);

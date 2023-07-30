@@ -22,8 +22,8 @@ namespace NaturalSQLParser.Communication
         private void BotIntroduction()
         {
 
-            _chat.AppendSystemMessage("You are an assistant who should translate given user input into a query request.");
-            _chat.AppendSystemMessage("You always get instructions and options from which you can choose.");
+            //_chat.AppendSystemMessage("You are an assistant who should translate given user input into a query request.");
+            //_chat.AppendSystemMessage("You always get instructions and options from which you can choose.");
 
 #if WORD_MATCHING
             _chat.AppendSystemMessage("You must use at most 2 words only from the selection given."); // default PerformQuery
@@ -34,9 +34,11 @@ namespace NaturalSQLParser.Communication
 #if INDEXING
             _chat.AppendSystemMessage("You write your choice as a number from the [] brackets. Dont write anything else!"); // extension PerformQueryWithIndices
             _chat.AppendSystemMessage("Only when you are asked to write a word, you can write any word you want."); // extension PerformQueryWithIndices
+
+            _chat.AppendUserInput("Example: You might choose from the following; [0] SortBy, [1] FilterBy and so on. To pick SortBy, you should only write \"0\" and nothing else.");
 #endif
 
-            _chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
+            //_chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
 
             Console.WriteLine("Write your query: ");
             var userQuery = Console.ReadLine();

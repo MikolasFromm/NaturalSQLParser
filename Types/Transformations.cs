@@ -125,8 +125,11 @@ namespace NaturalSQLParser.Types.Tranformations
                     HashSet<string> dropColumns = new();
                     
                     foreach (var arg in args)
-                        dropColumns.Add(arg);
-
+                    {
+                        if (!string.IsNullOrEmpty(arg))
+                            dropColumns.Add(arg);
+                    }
+                        
                     return new DropColumnTransformation(dropColumns);
 
                 case "SortBy":
@@ -184,7 +187,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     FilterCondition filter = new();
 
-                    filter.SourceHeaderName = args[1];
+                    filter.SourceHeaderName = args[0];
 
                     if (args[1] == "==")
                     {
@@ -272,6 +275,13 @@ namespace NaturalSQLParser.Types.Tranformations
         /// <returns></returns>
         public IEnumerable<string> GetArguments();
 
+        /// <summary>
+        /// Returns the argument at the given index. Allows the transformation class to adjust the following options based on the requested argument.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public string GetArgumentAt(int index);
+
         public string GetFollowingHumanArgumentsInstructions();
     }
 
@@ -302,6 +312,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public string GetArgumentsInstructions() => string.Empty;
 
         public IEnumerable<string> GetArguments() => new List<string>();
+
+        public string GetArgumentAt(int index) => string.Empty;
 
         public string GetFollowingHumanArgumentsInstructions() => string.Empty;
 
@@ -360,6 +372,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public IEnumerable<string> GetArguments() => new List<string>();
 
+        public string GetArgumentAt(int index) => string.Empty;
+
         public string GetFollowingHumanArgumentsInstructions() => string.Empty;
     }
 
@@ -375,7 +389,9 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public String SortByHeaderName { get; set; }
 
-        public SortByTransformation(String sortByHeaderName, SortDirection direction)
+        private static readonly List<string> _argumentsList = new List<string> { "Asc", "Desc" };
+
+    public SortByTransformation(String sortByHeaderName, SortDirection direction)
         {
             SortByHeaderName = sortByHeaderName;
             Direction = direction;
@@ -418,7 +434,14 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetArgumentsInstructions() => "Choose whether the sorting should be ascending or descending";
 
-        public IEnumerable<string> GetArguments() => new List<string> { "Asc", "Desc" };
+        public IEnumerable<string> GetArguments() => _argumentsList;
+
+        public string GetArgumentAt(int index)
+        {
+            if (index < 0 || index >= _argumentsList.Count)
+                throw new ArgumentOutOfRangeException($"Index \"{index}\" in {nameof(GetArgumentAt)} out of range");
+            return _argumentsList[index];
+        }
 
         public string GetFollowingHumanArgumentsInstructions() => string.Empty;
     }
@@ -427,7 +450,7 @@ namespace NaturalSQLParser.Types.Tranformations
     {
         public bool HasArguments => true;
 
-        public bool HasFollowingHumanArguments => false;
+        public bool HasFollowingHumanArguments { get; set; } // might be true if we the arguments requires so
 
         public TransformationType Type => TransformationType.GroupBy;
 
@@ -437,14 +460,18 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public String TargetHeaderName { get; set; }
 
+        private static readonly List<string> _argumentsList = new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
+
         public GroupByTransformation(HashSet<string> stringsToGroup, Agregation groupAgregation, string targetHeaderName)
         {
             StringsToGroup = stringsToGroup;
             GroupAgregation = groupAgregation;
             TargetHeaderName = targetHeaderName;
+            HasFollowingHumanArguments = false; // default value
         }
 
         internal GroupByTransformation() { }
+
         public List<Field> PerformTransformation(List<Field> fields)
         {
             Field? field = fields.FirstOrDefault(x => x.Header.Name == TargetHeaderName);
@@ -593,7 +620,24 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetArgumentsInstructions() => "Choose one of the following Agregations you want to apply on the grouped dataset";
 
-        public IEnumerable<string> GetArguments() => new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
+        public IEnumerable<string> GetArguments() => _argumentsList;
+
+        public string GetArgumentAt(int index)
+        {
+            if (index < 0 || index >= _argumentsList.Count)
+                throw new ArgumentOutOfRangeException($"Index \"{index}\" in {nameof(GetArgumentAt)} out of range");
+
+            if (index == 0 // Sum
+                || index == 1 // Avg
+                || index == 2 // Concat
+                || index == 4 // CountAll
+                || index == 5) // GroupKey
+            {
+                HasFollowingHumanArguments = true;
+            }
+
+            return _argumentsList[index];
+        }
 
         public string GetFollowingHumanArgumentsInstructions() => string.Empty;
     }
@@ -607,6 +651,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public TransformationType Type => TransformationType.FilterBy;
 
         public FilterCondition FilterCondition { get; set; }
+
+        private static readonly List<string> _argumentsList = new List<string> { "==", "!=", "<", ">" };
 
         public FilterByTransformation(FilterCondition filterCondition)
         {
@@ -688,7 +734,14 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public string GetArgumentsInstructions() => "Choose one of the following Relations you want to apply on the filtered dataset";
 
-        public IEnumerable<string> GetArguments() => new List<string> { "==", "!=", "<", ">" };
+        public IEnumerable<string> GetArguments() => _argumentsList;
+
+        public string GetArgumentAt(int index)
+        {
+            if (index < 0 || index >= _argumentsList.Count)
+                throw new ArgumentOutOfRangeException($"Index \"{index}\" in {nameof(GetArgumentAt)} out of range");
+            return _argumentsList[index];
+        }
 
         public string GetFollowingHumanArgumentsInstructions() => "Write down the right side of the relation.";
     }

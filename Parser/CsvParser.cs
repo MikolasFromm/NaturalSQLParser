@@ -1,13 +1,13 @@
 ﻿using NaturalSQLParser.Types;
 using NaturalSQLParser.Types.Enums;
 using CsvHelper;
-using CsvHelper.Configuration;
 using System.Globalization;
 
 namespace NaturalSQLParser.Parser
 {
     public static class CsvParser
     {
+        public static char delimiter = ';';
         /// <summary>
         /// Parsing CSV file to List of <see cref="Field"/>s.
         /// </summary>
@@ -17,30 +17,42 @@ namespace NaturalSQLParser.Parser
         {
             var result = new List<Field>();
 
-            var lines = File.ReadAllLines(filePath);
-            var headers = lines[0].Split(';');
-            var data = lines.Skip(1).ToArray();
-
+            string line = null;
+            string headersLine = null;
+            string[] headers = null;
             Dictionary<int, Field> fieldDict = new Dictionary<int, Field>();
-            for (int i = 0; i < headers.Length; i++)
-            {
-                var header = headers[i];
-                var field = new Field()
-                {
-                    Header = new Header(header, FieldDataType.String, i),
-                    Data = new List<Cell>()
-                };
-                fieldDict.Add(i, field);
-            }
 
-            // iteration over all data lines
-            for (int j = 0; j < data.Length; j++) // iterating over rows
+            using (var reader = new StreamReader(filePath, System.Text.Encoding.UTF8)) 
             {
-                var dataLine = data[j].Split(';');
-                for (int i = 0; i < dataLine.Length; i++) // iterating over columns in a row
+                headersLine = reader.ReadLine();
+
+                if (headersLine is null)
+                    return null;
+                
+                headers = headersLine.Split(delimiter);
+                for (int i = 0; i < headers.Length; i++)
                 {
-                    if (fieldDict.ContainsKey(i))
-                        fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = j });
+                    var header = headers[i];
+                    var field = new Field()
+                    {
+                        Header = new Header(header, FieldDataType.String, i),
+                        Data = new List<Cell>()
+                    };
+                    fieldDict.Add(i, field);
+                }
+
+                line = reader.ReadLine();
+                int lineIndex = 0;
+                while (line is not null) 
+                {
+                    var dataLine = line.Split(delimiter);
+                    for (int i = 0; i < dataLine.Length; i++)
+                    {
+                        if (fieldDict.ContainsKey(i))
+                            fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = lineIndex });
+                    }   
+                    lineIndex++;
+                    line = reader.ReadLine();
                 }
             }
 
@@ -57,7 +69,7 @@ namespace NaturalSQLParser.Parser
         /// <param name="outputFilePath">Output filePath.</param>
         public static void ParseFieldsIntoCsv(IEnumerable<Field> fields, string outputFilePath)
         {
-            using(var writer  = new StreamWriter(outputFilePath))
+            using(var writer  = new StreamWriter(outputFilePath, false, System.Text.Encoding.UTF8))
             using(var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
                 var fieldList = new List<Field>();
