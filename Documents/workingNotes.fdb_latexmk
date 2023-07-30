@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1690728073 "c:/Users/mikol/Documents/CODE/NaturalSQLParser/Documents/workingNotes.tex" "workingNotes.pdf" "workingNotes" 1690728074 0
-  "c:/Users/mikol/Documents/CODE/NaturalSQLParser/Documents/workingNotes.tex" 1690728072 5531 30a18cc79d3704be6177c15d92b12505 ""
+["pdflatex"] 1690752836 "c:/Users/mikol/Documents/CODE/NaturalSQLParser/Documents/workingNotes.tex" "workingNotes.pdf" "workingNotes" 1690752837 0
+  "c:/Users/mikol/Documents/CODE/NaturalSQLParser/Documents/workingNotes.tex" 1690752835 7610 f0413b42a15beabbad0a8a3e5c57cc4d ""
   "c:/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1690626428 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "c:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1690624510 1004 54797486969f23fa377b128694d548df ""
   "c:/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex8.tfm" 1690624510 988 bdf658c3bfc2d96d3c8b02cfc1c94c20 ""
@@ -84,9 +84,9 @@
   "c:/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1690630912 4686905 8424befbf4f3da46e97346fdc4ffd1fb ""
   "c:/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1690630990 8172455 062322d1a5c0b05d00bac07a5793bb47 ""
   "c:/texlive/2023/texmf.cnf" 1690630885 713 e69b156964470283e0530f5060668171 ""
-  "workingNotes.aux" 1690728074 1049 f760f8799b814937507e70424e44e77a "pdflatex"
-  "workingNotes.out" 1690728074 456 e8df5ab1518e2809ed33398c0a22db42 "pdflatex"
-  "workingNotes.tex" 1690728072 5531 30a18cc79d3704be6177c15d92b12505 ""
+  "workingNotes.aux" 1690752837 1049 2e231e8466c0e4ba4a5683f902e9f192 "pdflatex"
+  "workingNotes.out" 1690752837 456 e8df5ab1518e2809ed33398c0a22db42 "pdflatex"
+  "workingNotes.tex" 1690752835 7610 f0413b42a15beabbad0a8a3e5c57cc4d ""
   (generated)
   "workingNotes.aux"
   "workingNotes.log"

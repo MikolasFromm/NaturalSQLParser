@@ -71,10 +71,40 @@ Sometimes it also happens that the LM returns a word semantically similar to wha
 
 Therefore, it seems promising to index each option in the collection of next moves and ask the LM to only pick the best fitting option and return its index. This way, the LM is not forced to return the exact word, which might eliminate many potential errors. 
 
-Unfortunately, this approach does not help when the LM is asked to return a real word which is not straightly related to the database. For example the usage of \textit{FilterBy} requires two arguments: \textit{relation} and \textit{right side of the relation}, where the \textit{right side} might be any meaningful word, for example:
+Sadly, this approach does not help when the LM is asked to return a real word which is not straightly related to the database. For example the usage of \textit{FilterBy} requires two arguments: \textit{relation} and \textit{right side of the relation}, where the \textit{right side} might be any meaningful word, for example:
 \begin{quotation}
     \textit{FilterBy.Age.\begin{math}>=\end{math}.18.}
 \end{quotation}
 Therefore, the LM is not able to return the index of the \textit{right side} argument, since it is not contained in the collection of possible options.
+
+\pagebreak
+
+Unfortunately, even this approach needs tweaking of the permanent system messages passed to the LM at the beginning of the conversation. When the LM is introduced to its role by the following messages:
+\begin{enumerate}
+    \item[1.] \textit{You are an assistant who should translate given user input into a query request.}
+    \item[2.] \textit{You always get instructions and options from which you can choose.}
+    \item[3.] \textit{You write your choice as a number from the [] brackets. Dont write anything else!} 
+    \item[4.] \textit{Only when you are asked to write a word, you can write any word you want.}
+    \item[5.] \textit{Dont ask any questions or dont give any following options. Just answer.} 
+\end{enumerate} the LM responses to the previous request looks like:
+\begin{enumerate}
+    \item[First collection:]\textit{[0] SortBy, [1] FilterBy, [2] GroupBy, [3] DropColumn}
+    \item[LM choice:]\textit{Please choose [0] SortBy}
+    \item[ERROR:]\textit{Invalid input, you must enter only an integer. Please try again.}
+    \item[LM choice:]\textit{Please choose [0] SortBy}
+    \item[] \textit{And so on...}  
+\end{enumerate}
+
+Not only the LM does not answer in the introduced format, but also is unable to recreate the answer to match the right format, even though the error message clearly states what is the expected format. It gets even more exciting (and useless) when we reduce the number of the introducing system messages at the beginning of a conversation. If we only specify how the LM answer should look like, leaving only the messages 3. and 4. from the previous list, the LM responses to the previous request looks like:
+
+\begin{enumerate}
+    \item[First collection:]\textit{[0] SortBy, [1] FilterBy, [2] GroupBy, [3] DropColumn}
+    \item[LM choice:]\textit{Let's start with SortBy. Please choose from the following options: 
+    \newline
+    [0] Ascending,
+    \newline
+    [1] Descending}
+\end{enumerate}
+which is absolutely out of the format, even though part of the response contains the important keyword.
 
 \end{document}
