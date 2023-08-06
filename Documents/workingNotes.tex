@@ -1,4 +1,6 @@
-\documentclass[12pt]{article}
+\documentclass[11pt]{article}
+
+\usepackage[a4paper]{geometry}
 
 \usepackage{amsmath}
 
@@ -106,5 +108,21 @@ Not only the LM does not answer in the introduced format, but also is unable to 
     [1] Descending}
 \end{enumerate}
 which is absolutely out of the format, even though part of the response contains the important keyword.
+
+\pagebreak
+
+The next example shows that the initial introducing messages matter a lot. When we give the LM the following instructions:
+\begin{enumerate}
+    \item \textit{You are an external API which translates user input into a query request.}
+    \item \textit{You sequentially build the query from left to right. You always get all next possible actions and you must always choose one.}
+    \item \textit{You always get a list of all available transformations or its arguments. When one transformation is finished, you get all possible next transformations.}
+    \item \textit{If you feel you have finished the query, choose the \"[0] Empty\" transformation.}
+    \item \textit{You must write only the numbers from the brackets. Dont write anything else!}
+    \item \textit{If the answer should not be a number, write the whole appropriate word.}
+    \item \textit{Dont ask any questions or dont give any following options. Just answer.}
+\end{enumerate}
+the LM responses started to match the required format. However, the LM was able to match only the last requested transformation from the user input and forgot to include the previous ones.
+
+In more tests with different user requests, the LM performed very well when the user input was only one transformation request, for example: \textit{Sort the people by their age} or \textit{Filter people with hometown Praha}, but even a combination of two successful requests resulted in a failure, for example: \textit{Sort the people by their age and filter those with hometown Praha.} LM was able to match only the last transformation, or failed to create any of them. 
 
 \end{document}
