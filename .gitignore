@@ -400,3 +400,7 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 /Query/Secrets.cs
+/Documents/*.fdb_latexmk
+/Documents/*.aux
+/Documents/*.fls
+/Documents/workingNotes.aux

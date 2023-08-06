@@ -4,6 +4,33 @@ using NaturalSQLParser.Types.Enums;
 
 namespace NaturalSQLParser.Types.Tranformations
 {
+    public static class StaticNames
+    {
+        // operator names
+        public const string Equals = "Equals";
+        public const string NotEquals = "Not Equals";
+        public const string GreaterThan = "Greater Than";
+        public const string LessThan = "Less Than";
+        public const string Ascending = "Asc";
+        public const string Descending = "Desc";
+
+        // transformation names
+        public const string Empty = "Empty";
+        public const string FilterBy = "FilterBy";
+        public const string SortBy = "SortBy";
+        public const string DropColumn = "DropColumn";
+        public const string GroupBy = "GroupBy";
+
+        // groupby argument names
+        public const string Sum = "Sum";
+        public const string Average = "Avg";
+        public const string Concat = "Concat";
+        public const string CountDistinct = "CountDistinct";
+        public const string CountAll = "CountAll";
+        public const string GroupKey = "GroupKey";
+
+    }
+
     public static class ListExtensions
     {
         /// <summary>
@@ -113,11 +140,11 @@ namespace NaturalSQLParser.Types.Tranformations
         {
             switch (transformation)
             {
-                case "Empty":
+                case StaticNames.Empty:
                 case "0":
                     return new EmptyTransformation();
 
-                case "DropColumn":
+                case StaticNames.DropColumn:
                 case "1":
                     if (args.Length < 1)
                         throw new ArgumentException("Not enough arguments for DropColumn transformation");
@@ -132,7 +159,7 @@ namespace NaturalSQLParser.Types.Tranformations
                         
                     return new DropColumnTransformation(dropColumns);
 
-                case "SortBy":
+                case StaticNames.SortBy:
                 case "2":
                     if (args.Length < 2)
                         throw new ArgumentException("Not enough arguments for SortBy transformation");
@@ -140,16 +167,16 @@ namespace NaturalSQLParser.Types.Tranformations
                     SortDirection direction = SortDirection.Ascending;
                     string headerName = args[0]; // gets the header of the field by which to sort
 
-                    if (args[1] == "Asc") // if ascending or descending
+                    if (args[1] == StaticNames.Ascending) // if ascending or descending
                         direction = SortDirection.Ascending;
-                    else if (args[1] == "Desc") // if ascending or descending
+                    else if (args[1] == StaticNames.Descending) // if ascending or descending
                         direction = SortDirection.Descending;
                     else
                         throw new ArgumentException($"SortDirection \"{args[1]}\" unrecognized");
 
                     return new SortByTransformation(headerName, direction);
 
-                case "GroupBy":
+                case StaticNames.GroupBy:
                 case "3":
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for GroupBy transformation");
@@ -160,17 +187,17 @@ namespace NaturalSQLParser.Types.Tranformations
 
 
                     targetHeader = args[0]; // gets the header of the field by which to group
-                    if (args[1] == "Sum")
+                    if (args[1] == StaticNames.Sum)
                         agregation = Agregation.Sum;
-                    else if (args[1] == "Avg")
+                    else if (args[1] == StaticNames.Average)
                         agregation = Agregation.Mean;
-                    else if (args[1] == "Concat")
+                    else if (args[1] == StaticNames.Concat)
                         agregation = Agregation.ConcatValues;
-                    else if (args[1] == "CountDistinct")
+                    else if (args[1] == StaticNames.CountDistinct)
                         agregation = Agregation.CountDistinct;
-                    else if (args[1] == "CountAll")
+                    else if (args[1] == StaticNames.CountAll)
                         agregation = Agregation.CountAll;
-                    else if (args[1] == "GroupKey")
+                    else if (args[1] == StaticNames.GroupKey)
                         agregation = Agregation.GroupKey;
                     else
                         throw new ArgumentException($"Agregation \"{args[1]}\" not supported");
@@ -180,7 +207,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     return new GroupByTransformation(groups, agregation, targetHeader);
 
-                case "FilterBy":
+                case StaticNames.FilterBy:
                 case "4":
                     if (args.Length < 3)
                         throw new ArgumentException("Not enough arguments for FilterBy transformation");
@@ -189,22 +216,22 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     filter.SourceHeaderName = args[0];
 
-                    if (args[1] == "==")
+                    if (args[1] == StaticNames.Equals)
                     {
                         filter.Relation = Relation.Equals;
                         filter.Condition = args[2];
                     }
-                    else if (args[1] == "!=")
+                    else if (args[1] == StaticNames.NotEquals)
                     {
                         filter.Relation = Relation.NotEquals;
                         filter.Condition = args[2];
                     }
-                    else if (args[1] == "<")
+                    else if (args[1] == StaticNames.LessThan)
                     {
                         filter.Relation = Relation.LessThan;
                         filter.Condition = args[2];
                     }
-                    else if (args[1] == ">")
+                    else if (args[1] == StaticNames.GreaterThan)
                     {
                         filter.Relation = Relation.GreaterThan;
                         filter.Condition = args[2];
@@ -460,7 +487,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public String TargetHeaderName { get; set; }
 
-        private static readonly List<string> _argumentsList = new List<string> { "Sum", "Avg", "Concat", "CountDistinct", "CountAll", "GroupKey" };
+        private static readonly List<string> _argumentsList = new List<string> { StaticNames.Sum, StaticNames.Average, StaticNames.Concat, StaticNames.CountDistinct, StaticNames.CountAll, StaticNames.GroupKey };
 
         public GroupByTransformation(HashSet<string> stringsToGroup, Agregation groupAgregation, string targetHeaderName)
         {
@@ -652,7 +679,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public FilterCondition FilterCondition { get; set; }
 
-        private static readonly List<string> _argumentsList = new List<string> { "==", "!=", "<", ">" };
+        private static readonly List<string> _argumentsList = new List<string> { StaticNames.Equals, StaticNames.NotEquals, StaticNames.LessThan, StaticNames.GreaterThan };
 
         public FilterByTransformation(FilterCondition filterCondition)
         {
