@@ -1,4 +1,4 @@
-﻿#define INDEXING
+﻿#define BETTER_INDEXING
 
 using NaturalSQLParser.Types.Enums;
 using OpenAI_API;
@@ -22,10 +22,9 @@ namespace NaturalSQLParser.Communication
         private void BotIntroduction()
         {
 
-            //_chat.AppendSystemMessage("You are an assistant who should translate given user input into a query request.");
-            //_chat.AppendSystemMessage("You always get instructions and options from which you can choose.");
-
 #if WORD_MATCHING
+            _chat.AppendSystemMessage("You are an assistant who should translate given user input into a query request.");
+            _chat.AppendSystemMessage("You always get instructions and options from which you can choose.");
             _chat.AppendSystemMessage("You must use at most 2 words only from the selection given."); // default PerformQuery
             _chat.AppendSystemMessage("But usually use just one word."); // default PerformQuery
             _chat.AppendSystemMessage("You can not use any other words than the ones given from the user input."); // default PerformQuery
@@ -35,10 +34,29 @@ namespace NaturalSQLParser.Communication
             _chat.AppendSystemMessage("You write your choice as a number from the [] brackets. Dont write anything else!"); // extension PerformQueryWithIndices
             _chat.AppendSystemMessage("Only when you are asked to write a word, you can write any word you want."); // extension PerformQueryWithIndices
 
+            // TODO: add more instructions in the resulting format
+
             _chat.AppendUserInput("Example: You might choose from the following; [0] SortBy, [1] FilterBy and so on. To pick SortBy, you should only write \"0\" and nothing else.");
 #endif
 
-            //_chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
+#if BETTER_INDEXING
+            _chat.AppendSystemMessage("You are an external API which translates user input into a query request."); // extension PerformQueryWithIndices
+            _chat.AppendSystemMessage("You sequentially build the query from left to right. You always get all next possible actions and you must always choose one."); // extension PerformQueryWithIndices
+            _chat.AppendSystemMessage("You always get a list of all available transformations or its arguments. When one transformation is finished, you get all possible next transformations."); // extension PerformQueryWithIndices
+            _chat.AppendSystemMessage("If you feel you have finished the query, choose the \"[0] Empty\" transformation."); // extension PerformQueryWithIndices
+            _chat.AppendSystemMessage("You must write only the numbers from the brackets. Dont write anything else!"); // extension PerformQueryWithIndices
+            _chat.AppendSystemMessage("If the answer should not be a number, write the whole appropriate word."); // extension PerformQueryWithIndices
+
+            // extension PerformQueryWithIndices example
+            _chat.AppendSystemMessage("Let me show you an example: \n" +
+                "Sort the people by their names and filter out those born outside Prague. \n" +
+                "Possible next moves are: \n" +
+                "[0] SortBy, [1] FilterBy, [2] GroupBy, [3] DropColumn \n" +
+                "YOU SHOULD ANSWER: \n" +
+                "0");
+#endif
+
+            _chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
 
             Console.WriteLine("Write your query: ");
             var userQuery = Console.ReadLine();
@@ -63,9 +81,8 @@ namespace NaturalSQLParser.Communication
             _verbose = verbose;
 
             _chat = _api.Chat.CreateConversation();
-            _chat.RequestParameters.Temperature = 0;
-            _chat.RequestParameters.TopP = 0;
-            _chat.RequestParameters.Model = Model.ChatGPTTurbo0301;
+            _chat.RequestParameters.TopP = 0.2;
+            _chat.RequestParameters.Model = Model.ChatGPTTurbo;
 
             this.BotIntroduction();
         }

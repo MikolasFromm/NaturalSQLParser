@@ -202,6 +202,10 @@ namespace NaturalSQLParser.Query
                         continue;
                     }
 
+                    // check is over
+                    if (transformationIndex == 0)
+                        break;
+
                     // Create the transformation candidate
                     var transformationCandidate = TransformationFactory.CreateByIndex(transformationIndex);
 
@@ -337,14 +341,6 @@ namespace NaturalSQLParser.Query
                     _communicationAgent.Indent();
                 }
                 _communicationAgent.Indent();
-
-                Console.WriteLine("(Enter any key to continue...)");
-                var endIt = Console.ReadLine();
-                if (String.IsNullOrEmpty(endIt))
-                {
-                    _communicationAgent.ShowConversationHistory();
-                    break;
-                }
             }
 
             return _transformations;
