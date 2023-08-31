@@ -59,6 +59,7 @@
     public enum CommunicationAgentMode
     {
         User,
-        AIBot
+        AIBot,
+        AIBotWebWhisper
     }
 }

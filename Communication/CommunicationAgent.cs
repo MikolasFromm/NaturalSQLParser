@@ -2,10 +2,7 @@
 
 using NaturalSQLParser.Types.Enums;
 using OpenAI_API;
-using OpenAI_API.Chat;
-using OpenAI_API.Completions;
 using OpenAI_API.Models;
-using System.Diagnostics.Tracing;
 
 namespace NaturalSQLParser.Communication
 {
@@ -19,6 +16,9 @@ namespace NaturalSQLParser.Communication
 
         private OpenAI_API.Chat.Conversation? _chat;
 
+        /// <summary>
+        /// Introduces a role to the chatBot with SystemMessages.
+        /// </summary>
         private void BotIntroduction()
         {
 
@@ -55,16 +55,42 @@ namespace NaturalSQLParser.Communication
                 "YOU SHOULD ANSWER: \n" +
                 "0");
 #endif
-
             _chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
+        }
 
-            Console.WriteLine("Write your query: ");
-            var userQuery = Console.ReadLine();
+        /// <summary>
+        /// Adds a user query to the chatBot. If no query is given, it prompts the user for input.
+        /// </summary>
+        /// <param name="userQuery"></param>
+        public void AddUserQuery(string userQuery = null)
+        {
+
+            // creates new chat and flushes the old one
+            this.CrateNewChat();
+                
+            // loads the userquery when empty
+            if (String.IsNullOrEmpty(userQuery))
+            {
+                Console.WriteLine("Write your query: ");
+                userQuery = Console.ReadLine();
+            }
 
             if (_verbose)
                 Console.WriteLine($"User input: {userQuery}");
 
+            // give the user query to the chatBot
             _chat.AppendSystemMessage($"Query: {userQuery}");
+        }
+
+        private void CrateNewChat()
+        {
+            if (_api is not null)
+            {
+                _chat = _api.Chat.CreateConversation();
+                _chat.RequestParameters.TopP = 0.2;
+                _chat.RequestParameters.Model = Model.ChatGPTTurbo;
+                BotIntroduction();
+            }
         }
 
         /// <summary>
@@ -79,12 +105,6 @@ namespace NaturalSQLParser.Communication
             _api = api;
             _mode = CommunicationAgentMode.AIBot;
             _verbose = verbose;
-
-            _chat = _api.Chat.CreateConversation();
-            _chat.RequestParameters.TopP = 0.2;
-            _chat.RequestParameters.Model = Model.ChatGPTTurbo;
-
-            this.BotIntroduction();
         }
 
         /// <summary>
@@ -106,38 +126,83 @@ namespace NaturalSQLParser.Communication
         /// Add (system) message to the conversation.
         /// </summary>
         /// <param name="message"></param>
-        public void InsertSystemMessage(string message)
+        public string InsertSystemMessage(string message)
         {
             if (_verbose)
                 Console.WriteLine(message);
 
-            if (_mode == CommunicationAgentMode.AIBot)
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
                 _chat.AppendSystemMessage(message);
+
+            return message;
         }
 
         /// <summary>
         /// Adds user input to the system conversation. Relevant only for AIBot mode.
         /// </summary>
         /// <param name="message"></param>
-        public void InsertUserMessage(string message)
+        public string InsertUserMessage(string message)
         {
             Console.WriteLine(message);
 
-            if ( _mode == CommunicationAgentMode.AIBot)
+            if ( _mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
                 _chat.AppendUserInput(message);
+
+            return message;
+        }
+
+        /// <summary>
+        /// Inserts next possible arguments to the conversation. Relevant only for AIBot mode.
+        /// For WebWhisper, it is used to insert the next possible arguments to the user input.
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public IEnumerable<string> InsertNextPossibleArguments(IEnumerable<string> args)
+        {
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+            {
+                foreach (var arg in args)
+                {
+                    InsertUserMessage($"> {arg}");
+                }
+            }
+
+            return args;
+        }
+
+        /// <summary>
+        /// Inserts next possible arguments to the conversation. Relevant only for AIBot mode.
+        /// For WebWhisper, it is used to insert the next possible arguments to the user input.
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public IEnumerable<string> InsertNextPossibleArgumentsWithIndices(IEnumerable<string> args)
+        {
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+            {
+                int i = 0;
+                foreach (var arg in args)
+                {
+                    InsertUserMessage($"> [{i++}] {arg}");
+                }
+            }
+
+            return args;
         }
 
         /// <summary>
         /// Default Error message "stream". Verbose independent
         /// </summary>
         /// <param name="message"></param>
-        public void ErrorMessage(string message)
+        public string ErrorMessage(string message)
         {
             if (_mode == CommunicationAgentMode.User)
                 Console.WriteLine($"ERROR: {message}");
 
-            if (_mode == CommunicationAgentMode.AIBot)
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
                 this.InsertUserMessage($"ERROR: {message}");
+
+            return message;
         }
 
         /// <summary>
@@ -159,7 +224,7 @@ namespace NaturalSQLParser.Communication
                     return response;
             }
            
-            if (_mode == CommunicationAgentMode.AIBot)
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
             {
                 string response = _chat.GetResponseFromChatbotAsync().Result;
                
@@ -179,7 +244,7 @@ namespace NaturalSQLParser.Communication
         /// </summary>
         public void ShowConversationHistory()
         {
-            if (_mode == CommunicationAgentMode.AIBot)
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
             {
                 foreach (var message in _chat.Messages)
                 {

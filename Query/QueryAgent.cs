@@ -45,6 +45,16 @@ namespace NaturalSQLParser.Query
         }
 
         /// <summary>
+        /// Mirror of a <see cref="CommunicationAgent"/> method to make it public for <see cref="QueryAgent"/> class. A legal way to create a new user query.
+        /// </summary>
+        /// <param name="userQuery"></param>
+        public void AddUserQuery(string userQuery = null)
+        {
+            if (_communicationAgent is not null)
+                _communicationAgent.AddUserQuery(userQuery);
+        }
+
+        /// <summary>
         /// Sequentially parsing query, checking correctness, generating transformations and obtaining necessary arguments for chosen transformations.
         /// Query mode independant. Using <see cref="CommunicationAgent"/> for comunication with user/bot.
         /// </summary>
@@ -60,8 +70,7 @@ namespace NaturalSQLParser.Query
 
                     // Print all possible transformations
                     _communicationAgent.InsertUserMessage($"---> Choose next transformation: ");
-                    foreach (var transformation in possibleTransformations)
-                        _communicationAgent.InsertUserMessage($"> {transformation.GetTransformationName()}");
+                    _communicationAgent.InsertNextPossibleArguments(from transformation in possibleTransformations select transformation.GetTransformationName());
                     _communicationAgent.Indent();
 
                     // Gets the next transformation name
@@ -76,8 +85,7 @@ namespace NaturalSQLParser.Query
                     // Get the primary instruction for the transformation
                     _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
                     var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
-                    foreach (var move in nextPossibleMoves)
-                        _communicationAgent.InsertUserMessage($"> {move}");
+                    _communicationAgent.InsertNextPossibleArguments(nextPossibleMoves);
                     _communicationAgent.Indent();
 
                     // loop until getting satisfying answer
@@ -101,8 +109,7 @@ namespace NaturalSQLParser.Query
                     {
                         // Get all possible transformations for the transformation
                         _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
-                        foreach (var argument in transformationCandidate.GetArguments())
-                            _communicationAgent.InsertUserMessage($"> {argument}");
+                        _communicationAgent.InsertNextPossibleArguments(transformationCandidate.GetArguments());
                         _communicationAgent.Indent();
 
                         // loop until getting satisfying answer
@@ -174,10 +181,7 @@ namespace NaturalSQLParser.Query
 
                     // Print all possible transformations
                     _communicationAgent.InsertUserMessage($"---> Choose next transformation: ");
-                    int i = 0;
-                    foreach (var transformation in possibleTransformations)
-                        _communicationAgent.InsertUserMessage($"> [{i++}] {transformation.GetTransformationName()}");
-                        
+                    _communicationAgent.InsertNextPossibleArgumentsWithIndices(from transformation in this.possibleTransformations select $"{transformation.GetTransformationName()}");
                     _communicationAgent.Indent();
 
                     // Gets the next transformation name
@@ -212,9 +216,7 @@ namespace NaturalSQLParser.Query
                     // Get the primary instruction for the transformation
                     _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
                     var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
-                    i = 0;
-                    foreach (var move in nextPossibleMoves)
-                        _communicationAgent.InsertUserMessage($"> [{i++}] {move}");
+                    _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleMoves);
                     _communicationAgent.Indent();
 
                     // loop until getting satisfying answer
@@ -255,11 +257,8 @@ namespace NaturalSQLParser.Query
                     {
                         // Get all possible transformations for the transformation
                         _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
-
-                        i = 0;
                         var nextPossibleArguments = transformationCandidate.GetArguments();
-                        foreach (var argument in nextPossibleArguments)
-                            _communicationAgent.InsertUserMessage($"> [{i++}] {argument}");
+                        _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleArguments);
                         _communicationAgent.Indent();
 
                         // loop until getting satisfying answer
@@ -298,7 +297,6 @@ namespace NaturalSQLParser.Query
 
                         if (transformationCandidate.HasFollowingHumanArguments)
                         {
-                            i = 0;
                             var nextPossibleHumanArguments = transformationCandidate.GetFollowingHumanArgumentsInstructions();
                             _communicationAgent.InsertUserMessage(nextPossibleHumanArguments);
                             _communicationAgent.Indent();

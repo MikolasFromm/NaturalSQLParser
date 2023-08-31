@@ -26,6 +26,7 @@ namespace NaturalSQLParser
             else
                 queryAgent = new QueryAgent(fields);
 
+            queryAgent.AddUserQuery();
             // perform query
 
 #if WORD_MATCHING
