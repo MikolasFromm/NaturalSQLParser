@@ -1,4 +1,5 @@
 ﻿using NaturalSQLParser.Communication;
+using NaturalSQLParser.Model;
 using NaturalSQLParser.Types;
 using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Types.Tranformations;
@@ -22,6 +23,21 @@ namespace NaturalSQLParser.Query
             new GroupByTransformation(),
             new FilterByTransformation()
         };
+
+        public static QueryAgent CreateUserQueryAgent(List<Field> fields, bool verbose = true)
+        {
+            return new QueryAgent(fields, verbose);
+        }
+
+        public static QueryAgent CreateOpenAIQueryAgent(OpenAIAPI api, List<Field> fields, bool verbose = true)
+        {
+            return new QueryAgent(api, fields, verbose);
+        }
+
+        public static QueryAgent CreateOpenAIServerQueryAgent(OpenAIAPI api, List<Field> fields, bool verbose = true)
+        {
+            return new QueryAgent(api, fields, verbose);
+        }
 
         /// <summary>
         /// Default constructor for creating query with OpenAI chatbot
@@ -342,6 +358,226 @@ namespace NaturalSQLParser.Query
             }
 
             return _transformations;
+        }
+
+        /// <summary>
+        /// Sequentially builds the transformations based on the query built so far. After any input, the "nextMoves" is saved in order to return the current next moves when whole query performed.
+        /// </summary>
+        /// <returns></returns>
+        public QueryViewModel ServerLikePerformQueryWithIndices(IList<string> queryItems)
+        {
+            var responseQueryModel = new QueryViewModel();
+
+            bool firstQueryItem = true;
+
+            while (queryItems.Any() || firstQueryItem)
+            {
+                ITransformation generatedTransformation = null;
+                try
+                {
+                    string nextMove = string.Empty;
+                    string transformationName = string.Empty;
+                    string firstArgument = string.Empty;
+                    string secondArgument = string.Empty;
+
+                    // Print all possible transformations
+                    _communicationAgent.InsertUserMessage($"---> Choose next transformation: ");
+                    responseQueryModel.NextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(from transformation in this.possibleTransformations select $"{transformation.GetTransformationName()}");
+                    _communicationAgent.Indent();
+
+                    // dont skip the previous queryItem when at the beginning
+                    if (!firstQueryItem)
+                        queryItems.RemoveAt(0);
+                    else
+                        firstQueryItem = false;
+
+                    var nextQueryItem = queryItems.FirstOrDefault();
+                    var index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
+
+                    // Gets the next transformation name    
+                    transformationName = _communicationAgent.GetResponse(nextQueryItem, index);
+
+
+                    if (string.IsNullOrEmpty(transformationName))
+                        break;
+
+                    // Try to parse the string into number
+                    if (!Int32.TryParse(transformationName, out int transformationIndex))
+                    {
+                        _communicationAgent.ErrorMessage($"Invalid input, you must enter only an integer. Please try again.");
+                        _communicationAgent.Indent();
+                        continue;
+                    }
+
+                    // Check if the number is in range
+                    if (transformationIndex >= possibleTransformations.Count())
+                    {
+                        _communicationAgent.ErrorMessage($"Invalid input out of range. You must choose from the selection above. Please try again.");
+                        _communicationAgent.Indent();
+                        continue;
+                    }
+
+                    // check is over
+                    if (transformationIndex == 0)
+                        break;
+
+                    // Create the transformation candidate
+                    var transformationCandidate = TransformationFactory.CreateByIndex(transformationIndex);
+
+                    // Get the primary instruction for the transformation
+                    _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                    var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
+                    var nextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleMoves);
+                    _communicationAgent.Indent();
+
+                    // loop until getting satisfying answer
+                    while (queryItems.Any())
+                    {
+                        // obtain the message
+                        queryItems.RemoveAt(0);
+
+                        responseQueryModel.NextMoves = nextMoves;
+
+                        nextQueryItem = queryItems.FirstOrDefault();
+                        index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
+
+                        var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                        responseQueryModel.AddBotSuggestion(response);
+
+                        // check the message
+                        bool isNotNullOrEmpty = !string.IsNullOrEmpty(response);
+                        bool isInt = Int32.TryParse(response, out int choice);
+                        bool isInRange = choice < nextPossibleMoves.Count();
+
+                        // act
+                        if (isNotNullOrEmpty && isInt && isInRange)
+                        {
+                            nextMove = transformationCandidate.GetNextMoves(_response).ElementAt(choice);
+                            break; // go to next stage
+                        }
+                        else
+                        {
+                            if (!isNotNullOrEmpty)
+                                _communicationAgent.ErrorMessage($"Invalid input: Empty message received!");
+
+                            else if (!isInt)
+                                _communicationAgent.ErrorMessage($"Invalid input: Non-integer message received!");
+
+                            else if (!isInRange)
+                                _communicationAgent.ErrorMessage($"Invalid input: Message out of range received!");
+                            else
+                                _communicationAgent.ErrorMessage($"Invalid input, you must choose from the options given above. Please try again.");
+
+                            _communicationAgent.Indent();
+                        }
+                    }
+
+                    if (transformationCandidate.HasArguments && queryItems.Any())
+                    {
+                        // Get all possible transformations for the transformation
+                        _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
+                        var nextPossibleArguments = transformationCandidate.GetArguments();
+                        nextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleArguments);
+                        _communicationAgent.Indent();
+
+                        // loop until getting satisfying answer
+                        while (queryItems.Any())
+                        {
+                            // obtain the message
+                            queryItems.RemoveAt(0);
+
+                            responseQueryModel.NextMoves = nextMoves;
+
+                            nextQueryItem = queryItems.FirstOrDefault();
+                            index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
+
+                            var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                            responseQueryModel.AddBotSuggestion(response);
+
+                            // check the message
+                            bool isNotNullOrEmpty = !string.IsNullOrEmpty(response);
+                            bool isInt = Int32.TryParse(response, out int choice);
+                            bool isInRange = choice < nextPossibleArguments.Count();
+
+                            // act
+                            if (isNotNullOrEmpty && isInt && isInRange)
+                            {
+                                firstArgument = transformationCandidate.GetArgumentAt(choice);
+                                break; // go to next stage
+                            }
+                            else
+                            {
+                                if (!isNotNullOrEmpty)
+                                    _communicationAgent.ErrorMessage($"Invalid input: Empty message received!");
+
+                                else if (!isInt)
+                                    _communicationAgent.ErrorMessage($"Invalid input: Non-integer message received!");
+
+                                else if (!isInRange)
+                                    _communicationAgent.ErrorMessage($"Invalid input: Message out of range received!");
+                                else
+                                    _communicationAgent.ErrorMessage($"Invalid input, you must choose from the options given above. Please try again.");
+
+                                _communicationAgent.Indent();
+                            }
+                        }
+
+                        if (transformationCandidate.HasFollowingHumanArguments && queryItems.Any())
+                        {
+                            var nextPossibleHumanArguments = transformationCandidate.GetFollowingHumanArgumentsInstructions();
+                            _communicationAgent.InsertUserMessage(nextPossibleHumanArguments);
+                            nextMoves = new List<string>(); // add empty list
+                            _communicationAgent.Indent();
+
+                            // loop until getting satisfying answer
+                            while (queryItems.Any())
+                            {
+                                // obtain the message
+                                queryItems.RemoveAt(0);
+
+                                responseQueryModel.NextMoves = nextMoves;
+
+                                nextQueryItem = queryItems.FirstOrDefault();
+                                index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
+
+                                var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                                responseQueryModel.AddBotSuggestion(response);
+
+                                // check the message
+                                bool isNotNullOrEmpty = !string.IsNullOrEmpty(response);
+
+                                // act
+                                if (isNotNullOrEmpty)
+                                {
+                                    secondArgument = response;
+                                    break; // go to next stage
+                                }
+                                else
+                                {
+                                    _communicationAgent.ErrorMessage($"Invalid input: Empty message received!");
+                                    _communicationAgent.Indent();
+                                }
+                            }
+                        }
+
+                    }
+
+                    // build the transformation
+                    generatedTransformation = TransformationFactory.BuildTransformation(transformationName, new string[] { nextMove, firstArgument, secondArgument });
+                    responseQueryModel.AddTransformation(generatedTransformation);
+
+                    // rebuild the possible response
+                    _response = generatedTransformation.Preprocess(_response);
+                }
+                catch (ArgumentException ex)
+                {
+                    _communicationAgent.ErrorMessage($"{ex.Message}. Please try again.");
+                    _communicationAgent.Indent();
+                }
+                _communicationAgent.Indent();
+            }
+
+            return responseQueryModel;
         }
     }
 }

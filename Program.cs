@@ -22,9 +22,9 @@ namespace NaturalSQLParser
             var yesNo = Console.ReadLine();
 
             if (yesNo == "Y")
-                queryAgent = new QueryAgent(new OpenAIAPI(Credentials.PersonalApiKey), fields);
+                queryAgent = QueryAgent.CreateOpenAIQueryAgent(new OpenAIAPI(Credentials.PersonalApiKey), fields);
             else
-                queryAgent = new QueryAgent(fields);
+                queryAgent = QueryAgent.CreateUserQueryAgent(fields);
 
             queryAgent.AddUserQuery();
             // perform query

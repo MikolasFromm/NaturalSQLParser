@@ -88,7 +88,7 @@ namespace NaturalSQLParser.Communication
             {
                 _chat = _api.Chat.CreateConversation();
                 _chat.RequestParameters.TopP = 0.2;
-                _chat.RequestParameters.Model = Model.ChatGPTTurbo;
+                _chat.RequestParameters.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
                 BotIntroduction();
             }
         }
@@ -209,7 +209,7 @@ namespace NaturalSQLParser.Communication
         /// Get response to the given query. If userMode set, content from <see cref="Console"/> will be given.
         /// </summary>
         /// <returns></returns>
-        public string GetResponse()
+        public string GetResponse(string nextMove = null, int nextMoveIndex = -1)
         {
             if (_mode == CommunicationAgentMode.User)
             {
@@ -226,7 +226,20 @@ namespace NaturalSQLParser.Communication
            
             if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
             {
-                string response = _chat.GetResponseFromChatbotAsync().Result;
+
+                string response = string.Empty;
+
+                if (String.IsNullOrEmpty(nextMove))
+                {
+                    response = _chat.GetResponseFromChatbotAsync().Result;
+                }
+                else
+                {
+                    // insert the response to the AI chat to follow the conversation
+                    _chat.AppendUserInput($"{nextMoveIndex}");
+
+                    response = nextMoveIndex.ToString();
+                }
                
                 if (_verbose)
                 {
