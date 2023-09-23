@@ -264,7 +264,7 @@ namespace NaturalSQLParser.Communication
                     response = _chat.GetResponseFromChatbotAsync().Result;
 
                     // show the history
-                    ShowConversationHistory();
+                    //ShowConversationHistory();
                 }
                 else
                 {

@@ -418,7 +418,6 @@ namespace NaturalSQLParser.Query
                     // Gets the next transformation name    
                     transformationName = _communicationAgent.GetResponse(nextQueryItem, index);
                     responseQueryModel.AddBotSuggestion(transformationName);
-                    totalStepsMade++;
 
 
                     if (string.IsNullOrEmpty(transformationName))
@@ -447,15 +446,17 @@ namespace NaturalSQLParser.Query
                     // Create the transformation candidate
                     transformationCandidate = TransformationFactory.CreateByIndex(transformationIndex);
 
-                    // Get the primary instruction for the transformation
-                    _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
-                    var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
-                    var nextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleMoves);
-                    _communicationAgent.Indent();
+                    IEnumerable<string> nextMoves = null;
 
                     // loop until getting satisfying answer
                     while (queryItems.Any())
                     {
+                        // Get the primary instruction for the transformation
+                        _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
+                        var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
+                        nextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleMoves);
+                        _communicationAgent.Indent();
+
                         // obtain the message
                         queryItems.RemoveAt(0);
 

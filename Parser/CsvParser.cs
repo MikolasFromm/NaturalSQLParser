@@ -2,6 +2,7 @@
 using NaturalSQLParser.Types.Enums;
 using CsvHelper;
 using System.Globalization;
+using System.Text;
 
 namespace NaturalSQLParser.Parser
 {
@@ -100,6 +101,49 @@ namespace NaturalSQLParser.Parser
                     csv.NextRecord();
                     currentRow++;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Parsing the inner List of <see cref="Field"/> representation back to CSV file, returning in string.
+        /// </summary>
+        /// <param name="fields"><see cref="List{Field}"/> input fields to parse.</param>
+        /// <param name="outputFilePath">Output filePath.</param>
+        public static string ParseFieldsIntoCsv(IEnumerable<Field> fields)
+        {
+            using (var writer = new StringWriter())
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                var fieldList = new List<Field>();
+                foreach (var field in fields)
+                {
+                    csv.WriteField(field.Header.Name);
+                    fieldList.Add(field);
+                }
+                csv.NextRecord();
+
+                // until not all lines empty
+                int currentRow = 0;
+                bool rowEmpty = false;
+                while (!rowEmpty)
+                {
+                    foreach (var field in fieldList)
+                    {
+                        if (currentRow < field.Data.Count)
+                        {
+                            csv.WriteField(field.Data[currentRow].Content);
+                            rowEmpty = false;
+                        }
+                        else
+                        {
+                            rowEmpty = true;
+                        }
+                    }
+                    csv.NextRecord();
+                    currentRow++;
+                }
+
+                return writer.ToString();
             }
         }
     }
