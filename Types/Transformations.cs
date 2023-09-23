@@ -257,6 +257,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public bool HasFollowingHumanArguments { get; }
 
+        public int TotalStepsNeeded { get; }
+
         /// <summary>
         /// Makes the real final transformation on the given field.
         /// </summary>
@@ -320,6 +322,8 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public bool HasFollowingHumanArguments => false;
 
+        public int TotalStepsNeeded => 0;
+
         public List<Field> PerformTransformation(List<Field> input_fields)
         {
             return input_fields;
@@ -353,6 +357,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public bool HasArguments => false;
 
         public bool HasFollowingHumanArguments => false;
+
+        public int TotalStepsNeeded => 1;
 
         public HashSet<String> DropHeaderNames { get; set; } = new HashSet<String>();
 
@@ -409,6 +415,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public bool HasArguments => true;
 
         public bool HasFollowingHumanArguments => false;
+
+        public int TotalStepsNeeded => 2;
 
         public TransformationType Type => TransformationType.SortBy;
 
@@ -477,7 +485,9 @@ namespace NaturalSQLParser.Types.Tranformations
     {
         public bool HasArguments => true;
 
-        public bool HasFollowingHumanArguments { get; set; } // might be true if we the arguments requires so
+        public bool HasFollowingHumanArguments { get; set; } // might be true if the arguments requires so
+
+        public int TotalStepsNeeded => 3;
 
         public TransformationType Type => TransformationType.GroupBy;
 
@@ -674,6 +684,8 @@ namespace NaturalSQLParser.Types.Tranformations
         public bool HasArguments => true;
 
         public bool HasFollowingHumanArguments => true;
+
+        public int TotalStepsNeeded => 2;
 
         public TransformationType Type => TransformationType.FilterBy;
 

@@ -1,4 +1,4 @@
-﻿#define BETTER_INDEXING
+﻿#define BRIEF_START
 
 using NaturalSQLParser.Types.Enums;
 using OpenAI_API;
@@ -15,6 +15,10 @@ namespace NaturalSQLParser.Communication
         private bool _verbose;
 
         private OpenAI_API.Chat.Conversation? _chat;
+
+        private string _querySoFar;
+
+        private string _userInputQuery;
 
         /// <summary>
         /// Introduces a role to the chatBot with SystemMessages.
@@ -47,15 +51,34 @@ namespace NaturalSQLParser.Communication
             _chat.AppendSystemMessage("You must write only the numbers from the brackets. Dont write anything else!"); // extension PerformQueryWithIndices
             _chat.AppendSystemMessage("If the answer should not be a number, write the whole appropriate word."); // extension PerformQueryWithIndices
 
+            _chat.AppendSystemMessage(string.Empty);
+
             // extension PerformQueryWithIndices example
             _chat.AppendSystemMessage("Let me show you an example: \n" +
                 "Sort the people by their names and filter out those born outside Prague. \n" +
                 "Possible next moves are: \n" +
                 "[0] SortBy, [1] FilterBy, [2] GroupBy, [3] DropColumn \n" +
+                "\n" +
                 "YOU SHOULD ANSWER: \n" +
                 "0");
 #endif
-            _chat.AppendSystemMessage("Dont ask any questions or dont give any following options. Just answer.");
+
+#if BRIEF_START
+            _chat.AppendSystemMessage("Build a trasformation query sequentially from left to right. You always get all next possible actions and you must always choose one.");
+            
+            _chat.AppendSystemMessage(
+                "Let me show you an example: \n" +
+                "Sort the people by their names and filter out those born outside Prague. \n" +
+                "First step would be built like: \n"+
+                "> [0] SortBy, \n" +
+                "> [1] FilterBy, \n" +
+                "> [2] GroupBy, \n" +
+                "> [3] DropColumn \n" +
+                "Your answer: \n" +
+                "0");
+
+            _chat.AppendSystemMessage("Only answer with a number from the brackets. If the answer should not be a number, write the whole appropriate word.");
+#endif
         }
 
         /// <summary>
@@ -75,20 +98,20 @@ namespace NaturalSQLParser.Communication
                 userQuery = Console.ReadLine();
             }
 
+            _userInputQuery = userQuery;
+
             if (_verbose)
                 Console.WriteLine($"User input: {userQuery}");
-
-            // give the user query to the chatBot
-            _chat.AppendSystemMessage($"Query: {userQuery}");
         }
 
         private void CrateNewChat()
         {
             if (_api is not null)
             {
+                _querySoFar = string.Empty;
                 _chat = _api.Chat.CreateConversation();
-                _chat.RequestParameters.TopP = 0.2;
-                _chat.RequestParameters.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
+                _chat.RequestParameters.TopP = 0.0;
+                _chat.RequestParameters.Model = OpenAI_API.Models.Model.GPT4;
                 BotIntroduction();
             }
         }
@@ -143,7 +166,8 @@ namespace NaturalSQLParser.Communication
         /// <param name="message"></param>
         public string InsertUserMessage(string message)
         {
-            Console.WriteLine(message);
+            if (_verbose)
+                Console.WriteLine(message);
 
             if ( _mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
                 _chat.AppendUserInput(message);
@@ -178,13 +202,10 @@ namespace NaturalSQLParser.Communication
         /// <returns></returns>
         public IEnumerable<string> InsertNextPossibleArgumentsWithIndices(IEnumerable<string> args)
         {
-            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+            int i = 0;
+            foreach (var arg in args)
             {
-                int i = 0;
-                foreach (var arg in args)
-                {
-                    InsertUserMessage($"> [{i++}] {arg}");
-                }
+                InsertUserMessage($"> [{i++}] {arg}");
             }
 
             return args;
@@ -231,12 +252,26 @@ namespace NaturalSQLParser.Communication
 
                 if (String.IsNullOrEmpty(nextMove))
                 {
+                    // show bot the user input
+                    _chat.AppendUserInput($"User initial input is: {_userInputQuery}");
+
+                    // show bot the query so far
+                    _chat.AppendUserInput($"The query build so far: {_querySoFar}");
+
+                    _chat.AppendUserInput("Answer the apropriate number!");
+
+                    // get response from the chatbot
                     response = _chat.GetResponseFromChatbotAsync().Result;
+
+                    // show the history
+                    ShowConversationHistory();
                 }
                 else
                 {
                     // insert the response to the AI chat to follow the conversation
                     _chat.AppendUserInput($"{nextMoveIndex}");
+
+                    _querySoFar += $"{nextMove}."; // insert the nextMove to the query so far
 
                     response = nextMoveIndex.ToString();
                 }
@@ -259,6 +294,9 @@ namespace NaturalSQLParser.Communication
         {
             if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
             {
+                Console.WriteLine("----------");
+                Console.WriteLine();
+                Console.WriteLine();
                 foreach (var message in _chat.Messages)
                 {
                     Console.WriteLine($"{message.Role}: {message.Content}");
@@ -271,7 +309,11 @@ namespace NaturalSQLParser.Communication
         /// </summary>
         public void Indent()
         {
-            Console.WriteLine();
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+                _chat.AppendUserInput(string.Empty);
+
+            if (_verbose)
+                Console.WriteLine();
         }
     }
 }

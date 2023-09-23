@@ -1,7 +1,6 @@
 ﻿using NaturalSQLParser.Communication;
 using NaturalSQLParser.Model;
 using NaturalSQLParser.Types;
-using NaturalSQLParser.Types.Enums;
 using NaturalSQLParser.Types.Tranformations;
 using OpenAI_API;
 
@@ -24,6 +23,7 @@ namespace NaturalSQLParser.Query
             new FilterByTransformation()
         };
 
+        #region Factory methods
         public static QueryAgent CreateUserQueryAgent(List<Field> fields, bool verbose = true)
         {
             return new QueryAgent(fields, verbose);
@@ -34,11 +34,13 @@ namespace NaturalSQLParser.Query
             return new QueryAgent(api, fields, verbose);
         }
 
-        public static QueryAgent CreateOpenAIServerQueryAgent(OpenAIAPI api, List<Field> fields, bool verbose = true)
+        public static QueryAgent CreateOpenAIServerQueryAgent(OpenAIAPI api, bool verbose = true)
         {
-            return new QueryAgent(api, fields, verbose);
+            return new QueryAgent(api, verbose);
         }
+        #endregion
 
+        #region Constructors
         /// <summary>
         /// Default constructor for creating query with OpenAI chatbot
         /// </summary>
@@ -61,6 +63,16 @@ namespace NaturalSQLParser.Query
         }
 
         /// <summary>
+        /// Default constructor for Server API communication
+        /// </summary>
+        public QueryAgent(OpenAIAPI api, bool verbose = true)
+        {
+            _communicationAgent = new CommunicationAgent(api, verbose);
+        }
+
+        #endregion
+
+        /// <summary>
         /// Mirror of a <see cref="CommunicationAgent"/> method to make it public for <see cref="QueryAgent"/> class. A legal way to create a new user query.
         /// </summary>
         /// <param name="userQuery"></param>
@@ -69,6 +81,8 @@ namespace NaturalSQLParser.Query
             if (_communicationAgent is not null)
                 _communicationAgent.AddUserQuery(userQuery);
         }
+
+        #region Query mode methods
 
         /// <summary>
         /// Sequentially parsing query, checking correctness, generating transformations and obtaining necessary arguments for chosen transformations.
@@ -364,14 +378,21 @@ namespace NaturalSQLParser.Query
         /// Sequentially builds the transformations based on the query built so far. After any input, the "nextMoves" is saved in order to return the current next moves when whole query performed.
         /// </summary>
         /// <returns></returns>
-        public QueryViewModel ServerLikePerformQueryWithIndices(IList<string> queryItems)
+        public QueryViewModel ServerLikePerformQueryWithIndices(IList<string> queryItems, IList<Field> fields)
         {
+            // refresh with the initial table
+            _response = new List<EmptyField>(fields);
+
             var responseQueryModel = new QueryViewModel();
 
             bool firstQueryItem = true;
 
+            ITransformation transformationCandidate = null;
+            int totalStepsMade = 0;
+
             while (queryItems.Any() || firstQueryItem)
             {
+                totalStepsMade = 0;
                 ITransformation generatedTransformation = null;
                 try
                 {
@@ -396,6 +417,8 @@ namespace NaturalSQLParser.Query
 
                     // Gets the next transformation name    
                     transformationName = _communicationAgent.GetResponse(nextQueryItem, index);
+                    responseQueryModel.AddBotSuggestion(transformationName);
+                    totalStepsMade++;
 
 
                     if (string.IsNullOrEmpty(transformationName))
@@ -422,7 +445,7 @@ namespace NaturalSQLParser.Query
                         break;
 
                     // Create the transformation candidate
-                    var transformationCandidate = TransformationFactory.CreateByIndex(transformationIndex);
+                    transformationCandidate = TransformationFactory.CreateByIndex(transformationIndex);
 
                     // Get the primary instruction for the transformation
                     _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
@@ -442,6 +465,7 @@ namespace NaturalSQLParser.Query
                         index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
                         var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                        totalStepsMade++;
                         responseQueryModel.AddBotSuggestion(response);
 
                         // check the message
@@ -492,6 +516,7 @@ namespace NaturalSQLParser.Query
                             index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
                             var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                            totalStepsMade++;
                             responseQueryModel.AddBotSuggestion(response);
 
                             // check the message
@@ -541,6 +566,7 @@ namespace NaturalSQLParser.Query
                                 index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
                                 var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                                totalStepsMade++;
                                 responseQueryModel.AddBotSuggestion(response);
 
                                 // check the message
@@ -562,12 +588,15 @@ namespace NaturalSQLParser.Query
 
                     }
 
-                    // build the transformation
-                    generatedTransformation = TransformationFactory.BuildTransformation(transformationName, new string[] { nextMove, firstArgument, secondArgument });
-                    responseQueryModel.AddTransformation(generatedTransformation);
+                    if (transformationCandidate is not null && totalStepsMade == transformationCandidate.TotalStepsNeeded)
+                    {
+                        // build the transformation
+                        generatedTransformation = TransformationFactory.BuildTransformation(transformationName, new string[] { nextMove, firstArgument, secondArgument });
+                        responseQueryModel.AddTransformation(generatedTransformation);
 
-                    // rebuild the possible response
-                    _response = generatedTransformation.Preprocess(_response);
+                        // rebuild the possible response
+                        _response = generatedTransformation.Preprocess(_response);
+                    }
                 }
                 catch (ArgumentException ex)
                 {
@@ -579,5 +608,7 @@ namespace NaturalSQLParser.Query
 
             return responseQueryModel;
         }
+
+        #endregion
     }
 }
