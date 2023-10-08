@@ -51,9 +51,20 @@ namespace NaturalSQLParser.Types.Tranformations
         /// </summary>
         /// <param name="field">Field to sort</param>
         /// <returns><see cref="IEnumerable{int}"/> collection of indices of the cells from the field</returns>
-        public static IEnumerable<int> SortAndGetIndexes(this Field field)
+        public static IEnumerable<int> SortAndGetIndexes(this Field field, SortDirection sortDirection)
         {
-            field.Data.Sort();
+            switch (sortDirection)
+            {
+                case SortDirection.Ascending:
+                    field.Data = field.Data.OrderBy(x => x.Content).ToList();
+                    break;
+                case SortDirection.Descending:
+                    field.Data = field.Data.OrderByDescending(x => x.Content).ToList();
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported sort direction");
+            }
+
             return field.Data.GetIndexes();
         }
 
@@ -424,9 +435,9 @@ namespace NaturalSQLParser.Types.Tranformations
 
         public String SortByHeaderName { get; set; }
 
-        private static readonly List<string> _argumentsList = new List<string> { "Asc", "Desc" };
+        private static readonly List<string> _argumentsList = new List<string> { StaticNames.Ascending, StaticNames.Descending };
 
-    public SortByTransformation(String sortByHeaderName, SortDirection direction)
+        public SortByTransformation(String sortByHeaderName, SortDirection direction)
         {
             SortByHeaderName = sortByHeaderName;
             Direction = direction;
@@ -439,7 +450,7 @@ namespace NaturalSQLParser.Types.Tranformations
             Field? source_field = input_fields.FirstOrDefault(x => x.Header.Name == this.SortByHeaderName);
             if (source_field is not null)
             {
-                var indexes = source_field.SortAndGetIndexes(); // sort the given field and get the sorted indices
+                var indexes = source_field.SortAndGetIndexes(Direction); // sort the given field and get the sorted indices
                 return input_fields.ReArrangeAndSelectByIndex(source_field.Header, indexes); // re-arrange all fields by the sorted indices and ignore the one already sorted
             }
             else
