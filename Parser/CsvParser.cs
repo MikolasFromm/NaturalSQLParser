@@ -10,7 +10,7 @@ namespace NaturalSQLParser.Parser
     {
         public static char delimiter = ';';
         /// <summary>
-        /// Parsing CSV file to List of <see cref="Field"/>s.
+        /// Parsing CSV file to List of <see cref="Field"/>s from given path.
         /// </summary>
         /// <param name="filePath">Path to a CSV file.</param>
         /// <returns>List of <see cref="Field"/>s from input.</returns>
@@ -58,6 +58,60 @@ namespace NaturalSQLParser.Parser
             }
 
             foreach(var field in fieldDict.Values)
+                result.Add(field);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Parsing CSV file to List of <see cref="Field"/>s. from given stream.
+        /// </summary>
+        /// <param name="filePath">Input stream</param>
+        /// <returns>List of <see cref="Field"/>s from input.</returns>
+        public static List<Field> ParseCsvFile(Stream fileStream)
+        {
+            var result = new List<Field>();
+
+            string line = null;
+            string headersLine = null;
+            string[] headers = null;
+            Dictionary<int, Field> fieldDict = new Dictionary<int, Field>();
+
+            using (var reader = new StreamReader(fileStream, System.Text.Encoding.UTF8))
+            {
+                headersLine = reader.ReadLine();
+
+                if (headersLine is null)
+                    return null;
+
+                headers = headersLine.Split(delimiter);
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var header = headers[i];
+                    var field = new Field()
+                    {
+                        Header = new Header(header, FieldDataType.String, i),
+                        Data = new List<Cell>()
+                    };
+                    fieldDict.Add(i, field);
+                }
+
+                line = reader.ReadLine();
+                int lineIndex = 0;
+                while (line is not null)
+                {
+                    var dataLine = line.Split(delimiter);
+                    for (int i = 0; i < dataLine.Length; i++)
+                    {
+                        if (fieldDict.ContainsKey(i))
+                            fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = lineIndex });
+                    }
+                    lineIndex++;
+                    line = reader.ReadLine();
+                }
+            }
+
+            foreach (var field in fieldDict.Values)
                 result.Add(field);
 
             return result;
