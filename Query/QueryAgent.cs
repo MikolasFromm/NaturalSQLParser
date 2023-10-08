@@ -390,6 +390,14 @@ namespace NaturalSQLParser.Query
             ITransformation transformationCandidate = null;
             int totalStepsMade = 0;
 
+            var querySoFar = string.Join('.', queryItems);
+
+            if (_communicationAgent.Verbose)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"---> Query: {querySoFar}");
+            }
+
             while (queryItems.Any() || firstQueryItem)
             {
                 totalStepsMade = 0;
@@ -402,9 +410,7 @@ namespace NaturalSQLParser.Query
                     string secondArgument = string.Empty;
 
                     // Print all possible transformations
-                    _communicationAgent.InsertUserMessage($"---> Choose next transformation: ");
-                    responseQueryModel.NextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(from transformation in this.possibleTransformations select $"{transformation.GetTransformationName()}");
-                    _communicationAgent.Indent();
+                    responseQueryModel.NextMoves = _communicationAgent.CreateNextQuestion($"---> Choose next transformation: ", from transformation in this.possibleTransformations select $"{transformation.GetTransformationName()}");
 
                     // dont skip the previous queryItem when at the beginning
                     if (!firstQueryItem)
@@ -416,7 +422,7 @@ namespace NaturalSQLParser.Query
                     var index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
                     // Gets the next transformation name    
-                    transformationName = _communicationAgent.GetResponse(nextQueryItem, index);
+                    transformationName = _communicationAgent.GetResponse(querySoFar, nextQueryItem, index);
                     responseQueryModel.AddBotSuggestion(transformationName);
 
 
@@ -452,10 +458,8 @@ namespace NaturalSQLParser.Query
                     while (queryItems.Any())
                     {
                         // Get the primary instruction for the transformation
-                        _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetNextMovesInstructions()}");
                         var nextPossibleMoves = transformationCandidate.GetNextMoves(_response);
-                        nextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleMoves);
-                        _communicationAgent.Indent();
+                        nextMoves = _communicationAgent.CreateNextQuestion($"---> {transformationCandidate.GetNextMovesInstructions()}", nextPossibleMoves);
 
                         // obtain the message
                         queryItems.RemoveAt(0);
@@ -465,7 +469,7 @@ namespace NaturalSQLParser.Query
                         nextQueryItem = queryItems.FirstOrDefault();
                         index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
-                        var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                        var response = _communicationAgent.GetResponse(querySoFar, nextQueryItem, index);
                         totalStepsMade++;
                         responseQueryModel.AddBotSuggestion(response);
 
@@ -500,10 +504,8 @@ namespace NaturalSQLParser.Query
                     if (transformationCandidate.HasArguments && queryItems.Any())
                     {
                         // Get all possible transformations for the transformation
-                        _communicationAgent.InsertUserMessage($"---> {transformationCandidate.GetArgumentsInstructions()}");
                         var nextPossibleArguments = transformationCandidate.GetArguments();
-                        nextMoves = _communicationAgent.InsertNextPossibleArgumentsWithIndices(nextPossibleArguments);
-                        _communicationAgent.Indent();
+                        nextMoves = _communicationAgent.CreateNextQuestion($"---> {transformationCandidate.GetArgumentsInstructions()}", nextPossibleArguments);
 
                         // loop until getting satisfying answer
                         while (queryItems.Any())
@@ -516,7 +518,7 @@ namespace NaturalSQLParser.Query
                             nextQueryItem = queryItems.FirstOrDefault();
                             index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
-                            var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                            var response = _communicationAgent.GetResponse(querySoFar, nextQueryItem, index);
                             totalStepsMade++;
                             responseQueryModel.AddBotSuggestion(response);
 
@@ -550,10 +552,8 @@ namespace NaturalSQLParser.Query
 
                         if (transformationCandidate.HasFollowingHumanArguments && queryItems.Any())
                         {
-                            var nextPossibleHumanArguments = transformationCandidate.GetFollowingHumanArgumentsInstructions();
-                            _communicationAgent.InsertUserMessage(nextPossibleHumanArguments);
                             nextMoves = new List<string>(); // add empty list
-                            _communicationAgent.Indent();
+                            _communicationAgent.CreateNextQuestion(transformationCandidate.GetFollowingHumanArgumentsInstructions());
 
                             // loop until getting satisfying answer
                             while (queryItems.Any())
@@ -566,7 +566,7 @@ namespace NaturalSQLParser.Query
                                 nextQueryItem = queryItems.FirstOrDefault();
                                 index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
-                                var response = _communicationAgent.GetResponse(nextQueryItem, index);
+                                var response = _communicationAgent.GetResponse(querySoFar, nextQueryItem, index);
                                 totalStepsMade++;
                                 responseQueryModel.AddBotSuggestion(response);
 
@@ -606,6 +606,9 @@ namespace NaturalSQLParser.Query
                 }
                 _communicationAgent.Indent();
             }
+
+            if (_communicationAgent.Verbose)
+                _communicationAgent.ShowConversationHistory();
 
             return responseQueryModel;
         }

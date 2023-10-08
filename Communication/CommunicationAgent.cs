@@ -16,9 +16,9 @@ namespace NaturalSQLParser.Communication
 
         private OpenAI_API.Chat.Conversation? _chat;
 
-        private string _querySoFar;
-
         private string _userInputQuery;
+
+        private string _nextComingQuestion;
 
         /// <summary>
         /// Introduces a role to the chatBot with SystemMessages.
@@ -108,13 +108,17 @@ namespace NaturalSQLParser.Communication
         {
             if (_api is not null)
             {
-                _querySoFar = string.Empty;
                 _chat = _api.Chat.CreateConversation();
                 _chat.RequestParameters.TopP = 0.0;
                 _chat.RequestParameters.Model = OpenAI_API.Models.Model.GPT4;
                 BotIntroduction();
             }
         }
+
+        /// <summary>
+        /// Returns the current chatBot verbose setting.
+        /// </summary>
+        public bool Verbose { get { return _verbose; } }
 
         /// <summary>
         /// Constructor for OpenAIAPIBot feature. Use when communication with bot required. <see cref="OpenAIAPI"/> should be already initialized with API-token and all related settings.
@@ -170,7 +174,9 @@ namespace NaturalSQLParser.Communication
                 Console.WriteLine(message);
 
             if ( _mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+            {
                 _chat.AppendUserInput(message);
+            }
 
             return message;
         }
@@ -192,6 +198,34 @@ namespace NaturalSQLParser.Communication
             }
 
             return args;
+        }
+
+        /// <summary>
+        /// Creates a next question and saves it until the AI Bot is asked to produce response.
+        /// </summary>
+        /// <param name="question"></param>
+        /// <param name="possibleChoices"></param>
+        /// <returns></returns>
+        public IEnumerable<string> CreateNextQuestion(string question, IEnumerable<string> possibleChoices = null)
+        {
+
+            if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+            {
+                _nextComingQuestion = $"{question}\n";
+
+                if (possibleChoices is not null)
+                {
+                    int i = 0;
+                    foreach (var choice in possibleChoices)
+                    {
+                        _nextComingQuestion += $"> [{i++}] {choice}\n";
+                    }
+                }
+
+                _nextComingQuestion += "\n";
+            }
+
+            return possibleChoices;
         }
 
         /// <summary>
@@ -230,7 +264,7 @@ namespace NaturalSQLParser.Communication
         /// Get response to the given query. If userMode set, content from <see cref="Console"/> will be given.
         /// </summary>
         /// <returns></returns>
-        public string GetResponse(string nextMove = null, int nextMoveIndex = -1)
+        public string GetResponse(string querySoFar = null, string nextMove = null, int nextMoveIndex = -1)
         {
             if (_mode == CommunicationAgentMode.User)
             {
@@ -256,7 +290,10 @@ namespace NaturalSQLParser.Communication
                     _chat.AppendUserInput($"User initial input is: {_userInputQuery}");
 
                     // show bot the query so far
-                    _chat.AppendUserInput($"The query build so far: {_querySoFar}");
+                    _chat.AppendUserInput($"The query build so far: {querySoFar}");
+
+                    // show the possibilities
+                    InsertUserMessage(_nextComingQuestion);
 
                     _chat.AppendUserInput("Answer the apropriate number!");
 
@@ -268,17 +305,25 @@ namespace NaturalSQLParser.Communication
                 }
                 else
                 {
+                    // show the possibilities
+                    InsertUserMessage(_nextComingQuestion);
+
                     // insert the response to the AI chat to follow the conversation
                     _chat.AppendUserInput($"{nextMoveIndex}");
-
-                    _querySoFar += $"{nextMove}."; // insert the nextMove to the query so far
 
                     response = nextMoveIndex.ToString();
                 }
                
                 if (_verbose)
                 {
-                    Console.WriteLine($"Bot response: {response}");
+                    if(String.IsNullOrEmpty(nextMove))
+                    {
+                        Console.WriteLine($"Automatic response: {response}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Bot response: {response}");
+                    }
                 }
                 
                 return response;
@@ -310,7 +355,10 @@ namespace NaturalSQLParser.Communication
         public void Indent()
         {
             if (_mode == CommunicationAgentMode.AIBot || _mode == CommunicationAgentMode.AIBotWebWhisper)
+            {
                 _chat.AppendUserInput(string.Empty);
+            }
+                
 
             if (_verbose)
                 Console.WriteLine();
