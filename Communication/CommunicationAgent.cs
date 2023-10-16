@@ -264,7 +264,7 @@ namespace NaturalSQLParser.Communication
         /// Get response to the given query. If userMode set, content from <see cref="Console"/> will be given.
         /// </summary>
         /// <returns></returns>
-        public string GetResponse(string querySoFar = null, string nextMove = null, int nextMoveIndex = -1)
+        public string GetResponse(string querySoFar = null, string nextMove = null, int nextMoveIndex = -1, bool isUserInputExpected = false)
         {
             if (_mode == CommunicationAgentMode.User)
             {
@@ -284,6 +284,7 @@ namespace NaturalSQLParser.Communication
 
                 string response = string.Empty;
 
+                // when processing the next move
                 if (String.IsNullOrEmpty(nextMove))
                 {
                     // show bot the user input
@@ -295,7 +296,8 @@ namespace NaturalSQLParser.Communication
                     // show the possibilities
                     InsertUserMessage(_nextComingQuestion);
 
-                    _chat.AppendUserInput("Answer the apropriate number!");
+                    if (isUserInputExpected == false)
+                        _chat.AppendUserInput("Answer the apropriate number!");
 
                     // get response from the chatbot
                     response = _chat.GetResponseFromChatbotAsync().Result;
@@ -303,15 +305,24 @@ namespace NaturalSQLParser.Communication
                     // show the history
                     //ShowConversationHistory();
                 }
+
+                // when still processing the already given query
                 else
                 {
                     // show the possibilities
                     InsertUserMessage(_nextComingQuestion);
 
                     // insert the response to the AI chat to follow the conversation
-                    _chat.AppendUserInput($"{nextMoveIndex}");
-
-                    response = nextMoveIndex.ToString();
+                    if (isUserInputExpected)
+                    {
+                        _chat.AppendUserInput($"{nextMove}");
+                        response = nextMove;
+                    }
+                    else
+                    {
+                        _chat.AppendUserInput($"{nextMoveIndex}");
+                        response = nextMoveIndex.ToString();
+                    }
                 }
                
                 if (_verbose)

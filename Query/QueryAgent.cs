@@ -552,7 +552,6 @@ namespace NaturalSQLParser.Query
 
                         if (transformationCandidate.HasFollowingHumanArguments && queryItems.Any())
                         {
-                            nextMoves = new List<string>(); // add empty list
                             _communicationAgent.CreateNextQuestion(transformationCandidate.GetFollowingHumanArgumentsInstructions());
 
                             // loop until getting satisfying answer
@@ -561,14 +560,12 @@ namespace NaturalSQLParser.Query
                                 // obtain the message
                                 queryItems.RemoveAt(0);
 
-                                responseQueryModel.NextMoves = nextMoves;
-
                                 nextQueryItem = queryItems.FirstOrDefault();
                                 index = responseQueryModel.NextMoves.ToList().IndexOf(nextQueryItem);
 
-                                var response = _communicationAgent.GetResponse(querySoFar, nextQueryItem, index);
+                                var response = _communicationAgent.GetResponse(querySoFar, nextQueryItem, index, true);
                                 totalStepsMade++;
-                                responseQueryModel.AddBotSuggestion(response);
+                                responseQueryModel.AddBotSuggestion(response, true);
 
                                 // check the message
                                 bool isNotNullOrEmpty = !string.IsNullOrEmpty(response);
@@ -586,14 +583,16 @@ namespace NaturalSQLParser.Query
                                 }
                             }
                         }
-
                     }
 
                     if (transformationCandidate is not null && totalStepsMade == transformationCandidate.TotalStepsNeeded)
                     {
                         // build the transformation
                         generatedTransformation = TransformationFactory.BuildTransformation(transformationName, new string[] { nextMove, firstArgument, secondArgument });
-                        responseQueryModel.AddTransformation(generatedTransformation);
+
+                        // blocks building the transformation when the last argument is given by chatBot
+                        if (queryItems.Any())
+                            responseQueryModel.AddTransformation(generatedTransformation);
 
                         // rebuild the possible response
                         _response = generatedTransformation.Preprocess(_response);

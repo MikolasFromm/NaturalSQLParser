@@ -22,15 +22,26 @@ namespace NaturalSQLParser.Model
 
         public void AddTransformation(ITransformation transformation) { _transformations.Add(transformation); }
 
-        public string AddBotSuggestion(string suggestion) 
+        public string AddBotSuggestion(string suggestion, bool userInputExpected=false) 
         {
+            // save the suggestion
             _botSuggestion = suggestion;
 
+            // when user input is required, the response should hold only one suggestion made from the chatbot
+            if (userInputExpected)
+            {
+                _nextMoves = new List<string>() { suggestion };
+
+                return BotSuggestion;
+            }
+
+            // try to parse the suggestion as an index
             if (!Int32.TryParse(suggestion, out _botSuggestionIndex))
             {
                 _botSuggestionIndex = -1;
             }
 
+            // if the suggestion is an index, try to get the suggestion from the next moves list
             if (_botSuggestionIndex >= 0 && _botSuggestionIndex < _nextMoves.Count)
             {
                 _botSuggestion = _nextMoves[_botSuggestionIndex];
