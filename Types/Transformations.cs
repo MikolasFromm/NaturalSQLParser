@@ -13,10 +13,19 @@ namespace NaturalSQLParser.Types.Tranformations
         /// <returns><see cref="IEnumerable{int}"/> collection of indices</returns>
         public static IEnumerable<int> GetIndexes(this IEnumerable<Cell> cells)
         {
+            // get the index permutation after a rearrange operation
             var indexes =
                 from cell in cells
                 select cell.Index;
-            return indexes;
+            var indexesList = indexes.ToList();
+
+            // set the default indexing
+            int index = 0;
+            foreach (var cell in cells)
+                cell.Index = index++;
+
+            // return the permutation of the old indices
+            return indexesList;
         }
 
         /// <summary>
@@ -29,10 +38,10 @@ namespace NaturalSQLParser.Types.Tranformations
             switch (sortDirection)
             {
                 case SortDirection.Ascending:
-                    field.Data = field.Data.OrderBy(x => x.Content).ToList();
+                    field.Data.Sort((a,b) => a.CompareToTypeDependent(field.Header.Type, b));
                     break;
                 case SortDirection.Descending:
-                    field.Data = field.Data.OrderByDescending(x => x.Content).ToList();
+                    field.Data.Sort((b, a) => b.CompareToTypeDependent(field.Header.Type, a));
                     break;
                 default:
                     throw new ArgumentException("Unsupported sort direction");
@@ -55,9 +64,12 @@ namespace NaturalSQLParser.Types.Tranformations
                 if (fieldList[i].Header != fieldToIgnore)
                 {
                     Field newField = new() { Header = fieldList[i].Header };
+                    int newIndex = 0;
                     foreach (var index in indexes)
                     {
+                        fieldList[i].Data[index].Index = newIndex;
                         newField.Data.Add(fieldList[i].Data[index]);
+                        newIndex++;
                     }
                     fieldList[i] = newField;
                 }
