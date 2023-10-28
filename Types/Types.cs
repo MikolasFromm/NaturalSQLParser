@@ -1,4 +1,5 @@
 ﻿using NaturalSQLParser.Types.Enums;
+using System.Globalization;
 
 namespace NaturalSQLParser.Types
 {
@@ -70,6 +71,87 @@ namespace NaturalSQLParser.Types
                 return -1;
 
             return String.Compare(this.Content, other.Content);
+        }
+
+        public int CompareToTypeDependent(FieldDataType type, Cell? other)
+        {
+            if (other is null)
+                return -1;
+
+            switch (type)
+            {
+                case FieldDataType.Bool:
+                    bool A_Bool_parsingResult = Boolean.TryParse(this.Content, out bool A_bool);
+                    bool B_Bool_parsingResult = Boolean.TryParse(other.Content, out bool B_bool);
+
+                    if (A_Bool_parsingResult && B_Bool_parsingResult)
+                    {
+                        if (!A_bool && B_bool)
+                            return -1;
+                        else if (!A_bool && !B_bool)
+                            return 0;
+                        else if (A_bool && B_bool)
+                            return 0;
+                        else
+                            return 1;
+                    }
+                    else if (A_Bool_parsingResult)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        return 1;
+                    }
+                case FieldDataType.String:
+                    return String.Compare(this.Content, other.Content);
+
+                case FieldDataType.Number:
+                    bool A_parsingResult = Int32.TryParse(this.Content, out int A_number);
+                    bool B_parsingResult = Int32.TryParse(other.Content, out int B_number);
+
+                    if (A_parsingResult && B_parsingResult)
+                    {
+                        if (A_number < B_number)
+                            return -1;
+                        else if (A_number == B_number)
+                            return 0;
+                        else
+                            return 1;
+                    }
+                    else if (A_parsingResult)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        return 1;
+                    }
+
+                case FieldDataType.Date:
+                    bool A_DateTimeResult = DateTime.TryParse(this.Content, CultureInfo.InvariantCulture, out DateTime A_datetime);
+                    bool B_DateTimeResult = DateTime.TryParse(this.Content, CultureInfo.InvariantCulture, out DateTime B_datetime);
+
+                    if (A_DateTimeResult && B_DateTimeResult)
+                    {
+                        if (A_datetime < B_datetime)
+                            return -1;
+                        else if (A_datetime == B_datetime)
+                            return 0;
+                        else
+                            return 1;
+                    }
+                    else if (A_DateTimeResult)
+                    {
+                        return -1;
+                    }
+                    else
+                    {
+                        return 1;
+                    }
+                default:
+                    return 0;
+            }
         }
     }
 
