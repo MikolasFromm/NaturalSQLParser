@@ -3,6 +3,7 @@ using NaturalSQLParser.Types.Enums;
 using CsvHelper;
 using System.Globalization;
 using System.Text;
+using System.Reflection.PortableExecutable;
 
 namespace NaturalSQLParser.Parser
 {
@@ -16,51 +17,10 @@ namespace NaturalSQLParser.Parser
         /// <returns>List of <see cref="Field"/>s from input.</returns>
         public static List<Field> ParseCsvFile(string filePath)
         {
-            var result = new List<Field>();
-
-            string line = null;
-            string headersLine = null;
-            string[] headers = null;
-            Dictionary<int, Field> fieldDict = new Dictionary<int, Field>();
-
-            using (var reader = new StreamReader(filePath, System.Text.Encoding.UTF8)) 
+            using (var reader = new StreamReader(filePath, System.Text.Encoding.UTF8))
             {
-                headersLine = reader.ReadLine();
-
-                if (headersLine is null)
-                    return null;
-                
-                headers = headersLine.Split(delimiter);
-                for (int i = 0; i < headers.Length; i++)
-                {
-                    var header = headers[i];
-                    var field = new Field()
-                    {
-                        Header = new Header(header, FieldDataType.String, i),
-                        Data = new List<Cell>()
-                    };
-                    fieldDict.Add(i, field);
-                }
-
-                line = reader.ReadLine();
-                int lineIndex = 0;
-                while (line is not null) 
-                {
-                    var dataLine = line.Split(delimiter);
-                    for (int i = 0; i < dataLine.Length; i++)
-                    {
-                        if (fieldDict.ContainsKey(i))
-                            fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = lineIndex });
-                    }   
-                    lineIndex++;
-                    line = reader.ReadLine();
-                }
+                return ParseCsvStream(reader);
             }
-
-            foreach(var field in fieldDict.Values)
-                result.Add(field);
-
-            return result;
         }
 
         /// <summary>
@@ -70,6 +30,14 @@ namespace NaturalSQLParser.Parser
         /// <returns>List of <see cref="Field"/>s from input.</returns>
         public static List<Field> ParseCsvFile(Stream fileStream)
         {
+            using (var reader = new StreamReader(fileStream, System.Text.Encoding.UTF8))
+            {
+                return ParseCsvStream(reader);
+            }
+        }
+
+        private static List<Field> ParseCsvStream(StreamReader reader)
+        {
             var result = new List<Field>();
 
             string line = null;
@@ -77,38 +45,63 @@ namespace NaturalSQLParser.Parser
             string[] headers = null;
             Dictionary<int, Field> fieldDict = new Dictionary<int, Field>();
 
-            using (var reader = new StreamReader(fileStream, System.Text.Encoding.UTF8))
+            headersLine = reader.ReadLine(); // first line is headers
+
+            if (headersLine is null)
+                return null;
+
+            headers = headersLine.Split(delimiter);
+
+            var dataTypes = new FieldDataType[headers.Length];
+
+
+
+            // parse data
+            line = reader.ReadLine();
+            int lineIndex = 0;
+
+            while (line is not null)
             {
-                headersLine = reader.ReadLine();
+                var dataLine = line.Split(delimiter);
 
-                if (headersLine is null)
-                    return null;
-
-                headers = headersLine.Split(delimiter);
-                for (int i = 0; i < headers.Length; i++)
+                // try obtaining the dataTypes and headers from the zero and first line
+                if (lineIndex == 0)
                 {
-                    var header = headers[i];
-                    var field = new Field()
-                    {
-                        Header = new Header(header, FieldDataType.String, i),
-                        Data = new List<Cell>()
-                    };
-                    fieldDict.Add(i, field);
-                }
-
-                line = reader.ReadLine();
-                int lineIndex = 0;
-                while (line is not null)
-                {
-                    var dataLine = line.Split(delimiter);
                     for (int i = 0; i < dataLine.Length; i++)
                     {
-                        if (fieldDict.ContainsKey(i))
-                            fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = lineIndex });
+                        if (Double.TryParse(dataLine[i], CultureInfo.CurrentCulture, out double number))
+                            dataTypes[i] = FieldDataType.Number;
+                        else if (DateTime.TryParse(dataLine[i], CultureInfo.CurrentCulture, out DateTime datetime))
+                            dataTypes[i] = FieldDataType.Date;
+                        else if (bool.TryParse(dataLine[i], out bool bolean))
+                            dataTypes[i] = FieldDataType.Bool;
+                        else
+                            dataTypes[i] = FieldDataType.String;
                     }
-                    lineIndex++;
-                    line = reader.ReadLine();
+
+                    // parse headers
+                    for (int i = 0; i < headers.Length; i++)
+                    {
+                        var header = headers[i];
+                        var field = new Field()
+                        {
+                            Header = new Header(header, dataTypes[i], i),
+                            Data = new List<Cell>()
+                        };
+                        fieldDict.Add(i, field);
+                    }
                 }
+                
+                // regularly parse data, row by row
+                for (int i = 0; i < dataLine.Length; i++)
+                {
+                    if (fieldDict.ContainsKey(i))
+                        fieldDict[i].Data.Add(new Cell() { Content = dataLine[i], Index = lineIndex });
+                }
+
+                // go to next row
+                lineIndex++;
+                line = reader.ReadLine();
             }
 
             foreach (var field in fieldDict.Values)

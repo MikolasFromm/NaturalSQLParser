@@ -41,7 +41,7 @@ namespace NaturalSQLParser.Types.Tranformations
                     field.Data.Sort((a,b) => a.CompareToTypeDependent(field.Header.Type, b));
                     break;
                 case SortDirection.Descending:
-                    field.Data.Sort((b, a) => b.CompareToTypeDependent(field.Header.Type, a));
+                    field.Data.Sort((a, b) => b.CompareToTypeDependent(field.Header.Type, a));
                     break;
                 default:
                     throw new ArgumentException("Unsupported sort direction");
@@ -705,7 +705,7 @@ namespace NaturalSQLParser.Types.Tranformations
                 {
                     case Relation.Equals:
 
-                        var eq_result = from cell in field.Data where cell.Content == FilterCondition.Condition select cell;
+                        var eq_result = from cell in field.Data where cell.CompareTo_TypeDependent(field.Header.Type, FilterCondition.Condition) == 0 select cell;
                         field.Data = eq_result.ToList();
                         var eq_indexes = field.Data.GetIndexes();
                         fields.ReArrangeAndSelectByIndex(field.Header, eq_indexes);
@@ -713,7 +713,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     case Relation.NotEquals:
 
-                        var neq_result = from cell in field.Data where cell.Content != FilterCondition.Condition select cell;
+                        var neq_result = from cell in field.Data where cell.CompareTo_TypeDependent(field.Header.Type, FilterCondition.Condition) != 0 select cell;
                         field.Data = neq_result.ToList();
                         var neq_indexes = field.Data.GetIndexes();
                         fields.ReArrangeAndSelectByIndex(field.Header, neq_indexes);
@@ -721,7 +721,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     case Relation.LessThan:
 
-                        var lt_result = from cell in field.Data where String.Compare(cell.Content, FilterCondition.Condition) < 0 select cell;
+                        var lt_result = from cell in field.Data where cell.CompareTo_TypeDependent(field.Header.Type, FilterCondition.Condition) < 0 select cell;
                         field.Data = lt_result.ToList();
                         var lt_indexes = field.Data.GetIndexes();
                         fields.ReArrangeAndSelectByIndex(field.Header, lt_indexes);
@@ -729,7 +729,7 @@ namespace NaturalSQLParser.Types.Tranformations
 
                     case Relation.GreaterThan:
 
-                        var gt_result = from cell in field.Data where String.Compare(cell.Content, FilterCondition.Condition) > 0 select cell;
+                        var gt_result = from cell in field.Data where cell.CompareTo_TypeDependent(field.Header.Type, FilterCondition.Condition) > 0 select cell;
                         field.Data = gt_result.ToList();
                         var gt_indexes = field.Data.GetIndexes();
                         fields.ReArrangeAndSelectByIndex(field.Header, gt_indexes);
